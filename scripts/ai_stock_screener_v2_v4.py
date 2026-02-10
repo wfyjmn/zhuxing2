@@ -32,6 +32,7 @@ Python版本：3.8+
 import tushare as ts
 import pandas as pd
 import numpy as np
+import re
 import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -368,9 +369,9 @@ def get_daily_screener():
     df = df[~df['ts_code'].isin(stock_basic.index)]
     df['name'] = df['ts_code'].map(lambda x: stock_basic_dict.get(x, {}).get('name', ''))
     
-    # 检查股票名称是否包含风险关键词
-    for keyword in EXCLUDE_NAME_KEYWORDS:
-        df = df[~df['name'].str.contains(keyword, na=False, regex=False)]
+    # 检查股票名称是否包含风险关键词（使用向量化操作）
+    pattern = '|'.join([re.escape(keyword) for keyword in EXCLUDE_NAME_KEYWORDS])
+    df = df[~df['name'].str.contains(pattern, na=False)]
     
     filtered_count = initial_count - len(df)
     if filtered_count > 0:
@@ -422,10 +423,10 @@ def get_daily_screener():
         )
 
         if df_daily_basic is not None and len(df_daily_basic) > 0:
-            # 预先转换数据类型以避免 FutureWarning
-            for col in ['total_mv', 'pe_ttm', 'turnover_rate']:
-                if col in df.columns:
-                    df[col] = df[col].astype('float64')
+            # 预先转换数据类型以避免 FutureWarning（向量化操作）
+            cols_to_convert = [col for col in ['total_mv', 'pe_ttm', 'turnover_rate'] if col in df.columns]
+            if cols_to_convert:
+                df[cols_to_convert] = df[cols_to_convert].astype('float64')
 
             df = df.merge(df_daily_basic, on='ts_code', how='left', suffixes=('', '_new'))
 
