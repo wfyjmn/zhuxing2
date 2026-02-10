@@ -11,4 +11,6 @@ __pycache__/
 /vendor
 *.egg-info/
 /.env
-.env
+.envrestored_files/
+projects/
+restore_*.py
