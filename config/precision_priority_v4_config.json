@@ -1,0 +1,143 @@
+{
+  "strategy_name": "主力资金驱动-高置信度策略",
+  "version": "5.0.0_LatestData",
+  "description": "基于Tushare资金流接口的真实主力数据，配合Optuna自动调参，使用2024-2025年最新数据",
+
+  "data": {
+    "start_date": "2023-01-01",
+    "end_date": "2025-12-30",
+    "n_stocks": 300,
+    "comment_n_stocks": "从100提升至300，增加样本多样性，防止过拟合",
+    "comment_date": "保持3年数据跨度（2023-2025），使用最新数据训练模型",
+    
+    "min_return_threshold": 0.05,
+    "comment_threshold": "从0.03提升至0.05。既然有了主力数据，只抓大肉，不抓毛刺",
+    
+    "prediction_days": [3, 5],
+    "filter_paused": true,
+    "filter_st": true
+  },
+
+  "feature_engineering": {
+    "use_adj_price": true,
+    "use_money_flow": true,
+    "comment": "必须确保 data_collector.py 能获取到 moneyflow 数据"
+  },
+
+  "train_features": [
+    "--- 核心维度1：主力资金 (新加入) ---",
+    "main_flow_rate",
+    "main_flow_persistence",
+    "main_control_proxy",
+    "retail_panic_ratio",
+    "main_net_inflow_ma5",
+    "capital_acceleration",
+
+    "--- 核心维度2：量价结构 (新加入) ---",
+    "volume_surge",
+    "turnover_rate",
+    "volume_ratio_5",
+    "volume_ratio_20",
+    "volume_price_correlation",
+
+    "--- 辅助维度：技术指标 (保留有效部分) ---",
+    "rsi_6",
+    "rsi_12",
+    "rsi_combination",
+    "macd",
+    "macd_hist",
+    "ma_5",
+    "ma_20",
+    "ma_bullish_arrangement",
+    "price_above_ma5",
+    "atr_14",
+    "volatility_20",
+
+    "--- 辅助维度：市场情绪 ---",
+    "stock_sentiment",
+    "up_down_ratio",
+    "sentiment_cycle"
+  ],
+
+  "optuna": {
+    "n_trials": 100,
+    "timeout": 7200,
+    "direction": "maximize",
+    "metric": "f1",
+    "comment_metric": "改为优化 F1 Score，强迫模型同时关注精确率和召回率",
+    "cv_folds": 5,
+    "early_stopping_rounds": 50
+  },
+
+  "xgboost_params_space": {
+    "learning_rate": {
+      "low": 0.01,
+      "high": 0.1,
+      "log": true,
+      "comment": "学习率：较小的学习率通常能获得更好的泛化能力"
+    },
+    "max_depth": {
+      "low": 3,
+      "high": 6,
+      "comment": "树的最大深度：金融数据噪音大，深度不宜过大"
+    },
+    "min_child_weight": {
+      "low": 10,
+      "high": 30,
+      "comment": "最小子节点权重：较大的值可以抑制过拟合"
+    },
+    "n_estimators": {
+      "low": 500,
+      "high": 1500,
+      "comment": "树的数量：更多的树通常能提升性能"
+    },
+    "scale_pos_weight": {
+      "low": 3.0,
+      "high": 8.0,
+      "comment_weight": "核心修改：权重范围设为3-8，强制模型重视正样本，解决召回率低的问题"
+    },
+    "subsample": {
+      "low": 0.6,
+      "high": 0.9,
+      "comment": "样本采样比例：用于防止过拟合"
+    },
+    "colsample_bytree": {
+      "low": 0.6,
+      "high": 0.9,
+      "comment": "特征采样比例：用于防止过拟合"
+    },
+    "reg_alpha": {
+      "low": 0.1,
+      "high": 10.0,
+      "log": true,
+      "comment": "L1正则化：用于特征选择"
+    },
+    "reg_lambda": {
+      "low": 0.1,
+      "high": 10.0,
+      "log": true,
+      "comment": "L2正则化：用于抑制过拟合"
+    },
+    "gamma": {
+      "low": 0.0,
+      "high": 5.0,
+      "comment": "最小分裂增益：控制树的增长"
+    }
+  },
+
+  "threshold": {
+    "target_precision": 0.60,
+    "comment_precision": "降低精确率目标，从65%降至60%，以换取更好的召回率",
+    "threshold_range": [0.40, 0.80],
+    "threshold_step": 0.01,
+    "comment_range": "扩大阈值搜索范围，确保找到最佳平衡点"
+  },
+
+  "model_config": {
+    "objective": "binary:logistic",
+    "eval_metric": ["auc", "logloss"],
+    "tree_method": "hist",
+    "n_jobs": -1,
+    "random_state": 42
+  }
+}

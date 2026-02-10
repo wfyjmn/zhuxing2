@@ -69,7 +69,7 @@ def _create_engine_with_retry():
             logger.warning(f"Database connection failed, retrying... (elapsed: {elapsed:.1f}s)")
             time.sleep(min(1, MAX_RETRY_TIME - elapsed))
     logger.error(f"Database connection failed after {MAX_RETRY_TIME}s: {last_error}")
-    raise last_error  # pyright: ignore [reportGeneralTypeIssues]
+    raise last_error
 
 def get_engine():
     global _engine

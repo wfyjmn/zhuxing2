@@ -1,0 +1,127 @@
+{
+  "strategy_name": "Optuna自动化参数调优训练器（V5.0优化版）",
+  "core_philosophy": "使用AUC优化，避免\"宁滥勿缺\"，确保精确率≥60%",
+  "version": "3.0",
+  "description": "基于对话4.txt优化建议：Float32内存优化、GC垃圾回收、AUC优化、大盘环境特征、精确率硬性约束",
+
+  "data": {
+    "start_date": "2023-01-01",
+    "end_date": "2024-12-31",
+    "min_return_threshold": 0.04,
+    "description": "标签定义：3-5天内涨幅≥4%（放宽：5%→4%）",
+    "prediction_days": [3, 4, 5],
+    "description": "预测未来3-5天的涨跌幅",
+    "n_stocks": 150,
+    "description": "股票数量（减少：300→150，避免OOM）",
+    "max_samples": 5000,
+    "description": "最大样本数限制"
+  },
+
+  "optuna": {
+    "n_trials": 50,
+    "description": "Optuna试验次数（减少：100→50，避免OOM）",
+    "timeout": 3600,
+    "description": "最长优化时间（秒）",
+    "direction": "maximize",
+    "description": "优化方向：最大化",
+    "metric": "auc",
+    "description": "优化指标：AUC（改进：f1→auc，避免\"宁滥勿缺\"）",
+    "cv_folds": 3,
+    "description": "交叉验证折数",
+    "early_stopping_rounds": 50,
+    "description": "早停轮数"
+  },
+
+  "threshold": {
+    "target_precision": 0.60,
+    "description": "目标精确率≥60%（硬性约束）",
+    "threshold_range": [0.15, 0.45],
+    "description": "阈值搜索范围",
+    "threshold_step": 0.01,
+    "description": "阈值搜索步长"
+  },
+
+  "model": {
+    "tree_method": "hist",
+    "description": "树方法：直方图近似（速度快）",
+    "max_bin": 128,
+    "description": "最大箱数（内存优化参数，减少：256→128）",
+    "use_label_encoder": false,
+    "description": "不使用标签编码器"
+  },
+
+  "memory_optimization": {
+    "float32_enabled": true,
+    "description": "启用Float32降维，节省50%内存",
+    "aggressive_gc": true,
+    "description": "激进的垃圾回收，防止内存泄漏"
+  },
+
+  "feature_engineering": {
+    "market_features": {
+      "enabled": true,
+      "description": "启用大盘环境特征（上证指数涨跌幅）",
+      "features": [
+        "market_pct_chg"
+      ]
+    },
+    "technical_features": {
+      "enabled": true,
+      "description": "启用技术指标特征",
+      "features": [
+        "ma5",
+        "ma10",
+        "ma20",
+        "momentum_5",
+        "momentum_10",
+        "volatility_10",
+        "volume_ratio",
+        "rsi"
+      ]
+    }
+  },
+
+  "optimization_goals": {
+    "primary": {
+      "metric": "auc",
+      "target": 0.65,
+      "description": "首要目标：AUC≥0.65（模型分离度）"
+    },
+    "secondary": {
+      "metric": "precision",
+      "target": 0.60,
+      "description": "次要目标：精确率≥60%（硬性约束）"
+    },
+    "tertiary": {
+      "metric": "recall",
+      "target": 0.15,
+      "description": "第三目标：召回率≥15%（宁愿错过机会，也不要抓坑）"
+    }
+  },
+
+  "expected_performance": {
+    "auc": {
+      "range": [0.60, 0.75],
+      "description": "预期AUC范围"
+    },
+    "precision": {
+      "min": 0.60,
+      "description": "最低精确率（硬性约束）"
+    },
+    "recall": {
+      "range": [0.10, 0.30],
+      "description": "预期召回率范围（低召回是正常的）"
+    },
+    "f1": {
+      "range": [0.20, 0.40],
+      "description": "预期F1分数范围"
+    }
+  },
+
+  "debug": {
+    "verbose": false,
+    "description": "详细输出",
+    "save_study": true,
+    "description": "保存Optuna研究结果"
+  }
+}

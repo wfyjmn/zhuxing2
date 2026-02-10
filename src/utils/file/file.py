@@ -4,11 +4,11 @@ import uuid
 import chardet
 from io import BytesIO
 from typing import Literal,Callable, Any, Optional,Union
-from pydantic import BaseModel, Field, field_validator,PrivateAttr,ConfigDict
+from pydantic import BaseModel, Field, field_validator,PrivateAttr
 from urllib.parse import urlparse
 from pptx import Presentation
 
-MAX_FILE_SIZE = 100 * 1024 * 1024
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 class File(BaseModel):
     """
@@ -20,11 +20,6 @@ class File(BaseModel):
         description="文件类型"
     )
     _local_path: Optional[str] = PrivateAttr(default=None)
-    model_config = ConfigDict(
-        json_schema_extra={
-            "x-component": "file-upload",  # 前端用文件上传组件
-        }
-    )
 
     def set_cache_path(self, path: str):
         """设置缓存路径"""
@@ -99,9 +94,17 @@ class FileOps:
     DOWNLOAD_DIR = "/tmp"
 
     @staticmethod
+    def read_content(file_obj:File, max_length=10000) -> str:
+        return ""
+
+    @staticmethod
+    def get_local_path(file_obj:File) -> str:
+        return file_obj.url
+
+    @staticmethod
     def _get_bytes_stream(file_obj:File) -> tuple[bytes, str]:
         """
-        获取文件内容和后缀, 大小限制检查, 超出抛异常
+        获取文件内容和后缀, 5MB大小限制检查, 超出抛异常
         """
         _, ext = infer_file_category(file_obj.url)
 
@@ -114,7 +117,7 @@ class FileOps:
                     content_length = resp.headers.get('Content-Length')
                     if content_length and int(content_length) > MAX_FILE_SIZE:
                         raise Exception(
-                            f"文件大小 ({int(content_length)} bytes) 超过限制 100MB，已终止下载。"
+                            f"文件大小 ({int(content_length)} bytes) 超过限制 5MB，已终止下载。"
                         )
 
                     # 场景：Header 缺失 Content-Length 或服务器 Header 欺骗
@@ -126,7 +129,7 @@ class FileOps:
                         if chunk:
                             current_size += len(chunk)
                             if current_size > MAX_FILE_SIZE:
-                                raise Exception(f"检测到文件超过 100MB，已中断。")
+                                raise Exception(f"检测到文件超过 5MB，已中断。")
                             downloaded_content.write(chunk)
 
                     # 获取完整 bytes
@@ -142,7 +145,7 @@ class FileOps:
             '''
             file_size = os.path.getsize(file_obj.url)
             if file_size > MAX_FILE_SIZE:
-                 raise Exception(f"本地文件大小 ({file_size} bytes) 超过限制 100MB")
+                 raise Exception(f"本地文件大小 ({file_size} bytes) 超过限制 5MB")
             '''
 
             with open(file_obj.url, 'rb') as f:

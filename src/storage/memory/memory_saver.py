@@ -109,13 +109,7 @@ class MemoryManager:
 
         # 4. 尝试创建连接池和 checkpointer
         try:
-            self._pool = AsyncConnectionPool(
-                conninfo=db_url,
-                timeout=DB_CONNECTION_TIMEOUT,
-                min_size=1,
-                max_idle=300,
-                check=AsyncConnectionPool.check_connection,
-            )
+            self._pool = AsyncConnectionPool(conninfo=db_url, timeout=DB_CONNECTION_TIMEOUT)
             self._checkpointer = AsyncPostgresSaver(self._pool)
             logger.info("AsyncPostgresSaver initialized successfully")
         except Exception as e:

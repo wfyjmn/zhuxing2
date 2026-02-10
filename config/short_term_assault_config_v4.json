@@ -1,0 +1,551 @@
+{
+  "strategy_name": "短期突击特征权重体系 v4.0",
+  "core_philosophy": "少错过，不犯错，全身而退，精准捕捉印钞机股票",
+  "version": "4.0",
+  "alignment": {
+    "description": "权重体系与预测模块、分桶分析器完全对齐",
+    "predictor_features": [
+      "main_capital_inflow_ratio",
+      "large_order_buy_rate",
+      "capital_inflow_persistence",
+      "northbound_capital_flow",
+      "elg_order_inflow",
+      "capital_strength_index",
+      "sector_heat_index",
+      "stock_sentiment_score",
+      "up_days_ratio",
+      "sentiment_cycle_position",
+      "sentiment_index",
+      "enhanced_rsi",
+      "volume_price_breakout_strength",
+      "intraday_attack_pattern",
+      "momentum_index",
+      "assault_composite_score",
+      "rsi_signal",
+      "momentum_strength"
+    ],
+    "printer_stock_features": [
+      "is_sector_leader_cap",
+      "is_sector_leader_return",
+      "is_sector_leader",
+      "continuous_inflow_days_count",
+      "has_continuous_inflow",
+      "perfect_technical_pattern",
+      "return_certainty_score",
+      "liquidity_qualified",
+      "continuous_rise_days",
+      "sustainability_qualified",
+      "risk_qualified",
+      "money_machine_score",
+      "is_money_machine"
+    ]
+  },
+  
+  "optimization_goals": {
+    "recall": {
+      "target": 0.80,
+      "weight": 0.40,
+      "description": "召回率>80%，抓住绝大多数上涨机会，实现'少错过'"
+    },
+    "precision": {
+      "target": 0.50,
+      "weight": 0.35,
+      "description": "精确率>50%，出击必中，减少无效交易，实现'不犯错'"
+    },
+    "overfitting_gap": {
+      "target": 0.20,
+      "weight": 0.15,
+      "description": "过拟合差距<20%，确保泛化能力，实现'全身而退'",
+      "calculation_method": "训练集精确率 - 测试集精确率",
+      "adjustment_rules": {
+        "trigger_condition": "过拟合差距 > 20%",
+        "priority_adjustments": [
+          {
+            "action": "降低技术动量维度权重",
+            "target": "从20%降至15%",
+            "reason": "技术特征最容易过拟合"
+          },
+          {
+            "action": "调整XGBoost模型参数",
+            "params": {
+              "max_depth": "从5降至3",
+              "reg_lambda": "从3增至5",
+              "reg_alpha": "从0.5增至1.0"
+            },
+            "reason": "增强正则化，防止过拟合"
+          }
+        ],
+        "bucket_monitoring": {
+          "key_metrics": "训练集高置信度桶 vs 测试集高置信度桶的精确率差距",
+          "threshold": ">20%",
+          "action": "自动触发权重调整提示"
+        }
+      }
+    },
+    "sharpe_ratio": {
+      "target": 20.0,
+      "weight": 0.10,
+      "description": "夏普比率>20，风险调整后收益优秀"
+    }
+  },
+
+  "feature_weights": {
+    "capital_strength": {
+      "weight": 0.35,
+      "description": "核心维度1：资金强度（原40%，调整后35%）",
+      "features": [
+        {
+          "name": "主力资金净流入占比",
+          "weight": 0.15,
+          "calculation": "主力资金净流入/成交额",
+          "threshold": ">5%为强流入",
+          "aligned_feature": "main_capital_inflow_ratio"
+        },
+        {
+          "name": "大单净买入率",
+          "weight": 0.10,
+          "calculation": "大单买入额/总买入额",
+          "threshold": ">30%为强信号",
+          "aligned_feature": "large_order_buy_rate"
+        },
+        {
+          "name": "资金流入持续性",
+          "weight": 0.05,
+          "calculation": "连续净流入天数",
+          "threshold": "≥3天为佳",
+          "aligned_feature": "capital_inflow_persistence"
+        },
+        {
+          "name": "北向资金流入",
+          "weight": 0.03,
+          "calculation": "北向资金净买入额",
+          "threshold": "板块内排名前20%",
+          "aligned_feature": "northbound_capital_flow"
+        },
+        {
+          "name": "超大单流入",
+          "weight": 0.02,
+          "calculation": "超大单买入量/总成交量",
+          "threshold": ">2%为强信号",
+          "aligned_feature": "elg_order_inflow"
+        }
+      ]
+    },
+    "market_sentiment": {
+      "weight": 0.35,
+      "description": "核心维度2：市场情绪（保持不变）",
+      "features": [
+        {
+          "name": "板块热度指数",
+          "weight": 0.12,
+          "calculation": "板块内涨停家数/板块总家数",
+          "threshold": ">10%为过热",
+          "aligned_feature": "sector_heat_index"
+        },
+        {
+          "name": "个股情绪得分",
+          "weight": 0.10,
+          "calculation": "基于龙虎榜、股吧热度等综合",
+          "threshold": ">70分(0-100)",
+          "aligned_feature": "stock_sentiment_score"
+        },
+        {
+          "name": "市场广度指标",
+          "weight": 0.08,
+          "calculation": "上涨家数/总家数",
+          "threshold": ">60%为普涨",
+          "aligned_feature": "up_days_ratio"
+        },
+        {
+          "name": "情绪周期位置",
+          "weight": 0.05,
+          "calculation": "情绪指标在周期中的位置",
+          "threshold": "上升初期或主升段",
+          "aligned_feature": "sentiment_cycle_position"
+        }
+      ]
+    },
+    "technical_momentum": {
+      "weight": 0.20,
+      "description": "核心维度3：技术动量（原25%，调整后20%）",
+      "features": [
+        {
+          "name": "RSI强化版",
+          "weight": 0.08,
+          "calculation": "RSI(6) + RSI(12) + RSI(24)加权",
+          "threshold": "综合>60且至少两个周期>50",
+          "aligned_feature": "enhanced_rsi"
+        },
+        {
+          "name": "RSI信号",
+          "weight": 0.03,
+          "calculation": "基于RSI多周期组合的买卖信号",
+          "threshold": "1=买入信号，0=无信号，-1=卖出信号",
+          "aligned_feature": "rsi_signal",
+          "note": "新增特征，从技术动量维度拆分"
+        },
+        {
+          "name": "动量强度",
+          "weight": 0.02,
+          "calculation": "基于RSI、量价突破、攻击形态的综合强度",
+          "threshold": "0-1，越高越强",
+          "aligned_feature": "momentum_strength",
+          "note": "新增特征，从技术动量维度拆分"
+        },
+        {
+          "name": "量价突破强度",
+          "weight": 0.05,
+          "calculation": "成交量放大倍数 × 涨幅",
+          "threshold": ">2倍为强突破",
+          "aligned_feature": "volume_price_breakout_strength"
+        },
+        {
+          "name": "分时图攻击形态",
+          "weight": 0.02,
+          "calculation": "分时图均线突破+放量形态识别",
+          "threshold": "存在明显攻击波",
+          "aligned_feature": "intraday_attack_pattern"
+        }
+      ]
+    },
+    "printer_stock_features": {
+      "weight": 0.10,
+      "description": "核心维度4：印钞机标的专属特征（新增，从资金强度和技术动量各拆分5%）",
+      "features": [
+        {
+          "name": "板块龙头标识（市值）",
+          "weight": 0.02,
+          "calculation": "市值排名前10%",
+          "threshold": "1=龙头，0=非龙头",
+          "aligned_feature": "is_sector_leader_cap",
+          "note": "重点关注高确定性特征"
+        },
+        {
+          "name": "板块龙头标识（涨幅）",
+          "weight": 0.01,
+          "calculation": "涨幅排名前5%",
+          "threshold": "1=龙头，0=非龙头",
+          "aligned_feature": "is_sector_leader_return"
+        },
+        {
+          "name": "板块龙头综合标识",
+          "weight": 0.02,
+          "calculation": "市值或涨幅排名达到龙头标准",
+          "threshold": "1=龙头，0=非龙头",
+          "aligned_feature": "is_sector_leader",
+          "note": "权重倾斜给高确定性特征"
+        },
+        {
+          "name": "连续资金流入天数",
+          "weight": 0.01,
+          "calculation": "连续资金净流入天数",
+          "threshold": "≥3天为佳",
+          "aligned_feature": "continuous_inflow_days_count"
+        },
+        {
+          "name": "有连续资金流入",
+          "weight": 0.01,
+          "calculation": "是否连续资金流入",
+          "threshold": "1=有，0=无",
+          "aligned_feature": "has_continuous_inflow"
+        },
+        {
+          "name": "技术形态完美",
+          "weight": 0.01,
+          "calculation": "RSI>50且MACD金叉",
+          "threshold": "1=完美，0=不完美",
+          "aligned_feature": "perfect_technical_pattern"
+        },
+        {
+          "name": "收益确定性得分",
+          "weight": 0.02,
+          "calculation": "连续资金流入+技术形态完美（0-2分）",
+          "threshold": "≥2分为高确定性",
+          "aligned_feature": "return_certainty_score",
+          "note": "重点关注高确定性特征"
+        }
+      ]
+    }
+  },
+
+  "enhanced_rsi_strategy": {
+    "rsi_combination": {
+      "short_term": {
+        "period": 6,
+        "weight": 0.4,
+        "sensitivity": "高"
+      },
+      "medium_term": {
+        "period": 12,
+        "weight": 0.3,
+        "sensitivity": "中"
+      },
+      "long_term": {
+        "period": 24,
+        "weight": 0.3,
+        "sensitivity": "低"
+      }
+    },
+    "dynamic_thresholds": {
+      "bull_market": {
+        "buy": 65,
+        "sell": 85,
+        "confidence_threshold": 0.75
+      },
+      "range_market": {
+        "buy": 50,
+        "sell": 70,
+        "confidence_threshold": 0.80
+      },
+      "bear_market": {
+        "buy": 40,
+        "sell": 60,
+        "confidence_threshold": 0.85
+      }
+    },
+    "confidence_linkage": {
+      "description": "RSI达标后需满足对应的置信度要求",
+      "rules": [
+        {
+          "market_environment": "bull_market",
+          "rsi_buy_condition": "RSI ≥ 65",
+          "confidence_requirement": "预测置信度 ≥ 0.75",
+          "action": "触发买入信号"
+        },
+        {
+          "market_environment": "range_market",
+          "rsi_buy_condition": "RSI ≥ 50",
+          "confidence_requirement": "预测置信度 ≥ 0.80",
+          "action": "触发买入信号"
+        },
+        {
+          "market_environment": "bear_market",
+          "rsi_buy_condition": "RSI ≥ 40",
+          "confidence_requirement": "预测置信度 ≥ 0.85",
+          "action": "触发买入信号"
+        }
+      ]
+    },
+    "divergence_detection": {
+      "top_divergence": {
+        "description": "价格创新高但RSI未创新高，谨慎",
+        "confidence_linkage": {
+          "condition": "出现顶背离",
+          "action": "无论置信度多高，均降低仓位50%",
+          "reason": "背离信号优先级高于置信度"
+        }
+      },
+      "bottom_divergence": {
+        "description": "价格创新低但RSI未创新低，机会",
+        "confidence_linkage": {
+          "condition": "出现底背离且置信度 ≥ 0.8",
+          "action": "可适当提高仓位（不超过单只股票上限）",
+          "reason": "底背离+高置信度为强信号"
+        }
+      }
+    }
+  },
+
+  "triple_confirmation": {
+    "capital_confirmation": {
+      "must_have": [
+        "主力资金连续2日净流入",
+        "大单买入占比>25%",
+        "资金流入速度加快(今日>昨日20%)"
+      ],
+      "preferred": [
+        "北向资金同向流入",
+        "机构席位净买入",
+        "板块整体资金流入"
+      ],
+      "exclusion": [
+        "主力资金大幅流出(>5%)",
+        "大单卖出占比>30%",
+        "连续3日资金流出"
+      ]
+    },
+    "sentiment_confirmation": {
+      "market_level": {
+        "index_environment": "上证指数在20日线上方",
+        "up_down_ratio": "上涨家数>下跌家数",
+        "limit_up_effect": "涨停家数>跌停家数2倍以上"
+      },
+      "sector_level": {
+        "sector_rank": "所属板块涨幅排名前30%",
+        "sector_strength": "板块指数突破关键位置",
+        "leader_effect": "板块内有涨停龙头"
+      },
+      "individual_level": {
+        "popularity": "讨论量排名前20%",
+        "news": "有正向催化剂",
+        "pattern": "突破形态完整"
+      }
+    },
+    "technical_confirmation": {
+      "momentum_indicators": [
+        "RSI(6)>60",
+        "MACD金叉且红柱放大",
+        "KDJ金叉且J值>50"
+      ],
+      "volume_price": [
+        "成交量较20日均量放大>50%",
+        "价格突破20日高点",
+        "量比>1.5"
+      ],
+      "time_cycles": [
+        "日线、60分钟线同步看多",
+        "调整时间充分(至少3天以上)",
+        "突破发生在早盘或尾盘关键时段"
+      ]
+    }
+  },
+
+  "signal_grading": {
+    "A_grade": {
+      "name": "A级信号",
+      "conditions": "三重确认全部满足+印钞机标的标识",
+      "position_ratio": 1.0,
+      "stop_loss": 0.03,
+      "trailing_stop": true,
+      "expected_holding_days": "3-5"
+    },
+    "B_grade": {
+      "name": "B级信号",
+      "conditions": "满足两重确认",
+      "position_ratio": 0.6,
+      "stop_loss": 0.05,
+      "trailing_stop": false,
+      "expected_holding_days": "2-3"
+    },
+    "C_grade": {
+      "name": "C级信号",
+      "conditions": "仅满足资金强度",
+      "position_ratio": 0.3,
+      "stop_loss": 0.08,
+      "trailing_stop": false,
+      "expected_holding_days": "1-2"
+    }
+  },
+
+  "trading_execution": {
+    "entry_timing": {
+      "preferred": [
+        "早盘30分钟内放量突破",
+        "尾盘30分钟内资金抢筹",
+        "盘中回调至关键支撑位"
+      ],
+      "avoid": [
+        "开盘冲高无持续性",
+        "尾盘偷袭无量拉升",
+        "大盘跳水时的逆势拉升"
+      ]
+    },
+    "exit_strategy": {
+      "take_profit": [
+        "盈利10%减仓1/3",
+        "盈利20%再减仓1/3",
+        "剩余仓位移动止盈(最高点回落8%)"
+      ],
+      "stop_loss": {
+        "A_grade": "亏损3%无条件止损",
+        "B_grade": "亏损5%无条件止损",
+        "C_grade": "亏损8%无条件止损"
+      }
+    }
+  },
+
+  "model_params": {
+    "xgboost": {
+      "max_depth": 5,
+      "reg_lambda": 3,
+      "reg_alpha": 0.5,
+      "gamma": 0.8,
+      "subsample": 0.7,
+      "colsample_bytree": 0.65,
+      "colsample_bylevel": 0.7,
+      "min_child_weight": 2,
+      "max_delta_step": 2,
+      "scale_pos_weight": 2.0,
+      "learning_rate": 0.025,
+      "n_estimators": 600,
+      "early_stopping_rounds": 40,
+      "eval_metric": ["auc", "logloss"],
+      "objective": "binary:logistic",
+      "random_state": 42
+    },
+    "overfitting_adjustment": {
+      "description": "当过拟合差距超标时自动调整的参数",
+      "adjusted_params": {
+        "max_depth": 3,
+        "reg_lambda": 5,
+        "reg_alpha": 1.0
+      }
+    }
+  },
+
+  "risk_management": {
+    "position_sizing": {
+      "single_stock_limit": 0.05,
+      "sector_limit": 0.15,
+      "bull_market": 0.90,
+      "range_market": 0.60,
+      "bear_market": 0.30
+    },
+    "market_condition_adjustment": {
+      "bull_market": {
+        "position": "80-90%",
+        "stop_loss": "宽松(5-8%)",
+        "holding_time": "可适当延长"
+      },
+      "range_market": {
+        "position": "50-70%",
+        "stop_loss": "严格(3-5%)",
+        "holding_time": "短线为主(3-7天)"
+      },
+      "bear_market": {
+        "position": "20-40%",
+        "stop_loss": "非常严格(2-3%)",
+        "holding_time": "超短线(1-3天)"
+      }
+    },
+    "performance_monitoring": {
+      "daily": ["胜率", "盈亏比", "最大回撤"],
+      "weekly": ["夏普比率", "过拟合程度", "特征有效性"],
+      "monthly": ["模型稳定性", "市场适应性", "参数优化"]
+    }
+  },
+  
+  "integration_with_modules": {
+    "predictor_module": {
+      "description": "与预测模块的特征对齐",
+      "feature_mapping": {
+        "main_capital_inflow_ratio": "capital_strength.主力资金净流入占比",
+        "large_order_buy_rate": "capital_strength.大单净买入率",
+        "capital_inflow_persistence": "capital_strength.资金流入持续性",
+        "northbound_capital_flow": "capital_strength.北向资金流入",
+        "elg_order_inflow": "capital_strength.超大单流入",
+        "capital_strength_index": "综合特征-资金强度指数",
+        "sector_heat_index": "market_sentiment.板块热度指数",
+        "stock_sentiment_score": "market_sentiment.个股情绪得分",
+        "up_days_ratio": "market_sentiment.市场广度指标",
+        "sentiment_cycle_position": "market_sentiment.情绪周期位置",
+        "sentiment_index": "market_sentiment.综合情绪指数",
+        "enhanced_rsi": "technical_momentum.RSI强化版",
+        "volume_price_breakout_strength": "technical_momentum.量价突破强度",
+        "intraday_attack_pattern": "technical_momentum.分时图攻击形态",
+        "momentum_index": "technical_momentum.动量指数",
+        "assault_composite_score": "综合特征-突击综合得分",
+        "rsi_signal": "technical_momentum.RSI信号",
+        "momentum_strength": "technical_momentum.动量强度"
+      }
+    },
+    "bucket_analyzer": {
+      "description": "与分桶分析器的联动",
+      "overfitting_monitoring": {
+        "key_metrics": "训练集高置信度桶 vs 测试集高置信度桶的精确率差距",
+        "threshold": ">20%",
+        "action": "自动触发权重调整提示"
+      }
+    }
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "strategy_name": "Stacking集成策略",
+  "version": "6.0.0_Ensemble",
+  "description": "基于Stacking的多模型集成策略，提升鲁棒性和精确率",
+
+  "base_models": {
+    "xgboost": {
+      "type": "XGBoostClassifier",
+      "description": "主力资金驱动",
+      "features": [
+        "main_flow_rate",
+        "main_flow_persistence",
+        "main_control_proxy",
+        "retail_panic_ratio",
+        "main_net_inflow_ma5",
+        "capital_acceleration",
+        "turnover_rate",
+        "volume_ratio_5",
+        "volume_ratio_20"
+      ],
+      "params": {
+        "learning_rate": 0.05,
+        "max_depth": 5,
+        "n_estimators": 800,
+        "scale_pos_weight": 5.0,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "random_state": 42,
+        "n_jobs": -1
+      }
+    },
+    "lightgbm": {
+      "type": "LGBMClassifier",
+      "description": "技术指标驱动",
+      "features": [
+        "rsi_6",
+        "rsi_12",
+        "rsi_combination",
+        "macd",
+        "macd_hist",
+        "atr_14",
+        "volatility_20",
+        "price_above_ma5",
+        "ma_bullish_arrangement",
+        "price_position",
+        "volume_price_correlation",
+        "volume_surge"
+      ],
+      "params": {
+        "learning_rate": 0.05,
+        "num_leaves": 31,
+        "n_estimators": 800,
+        "bagging_fraction": 0.8,
+        "feature_fraction": 0.8,
+        "is_unbalance": true,
+        "random_state": 42,
+        "n_jobs": -1,
+        "verbose": -1
+      }
+    },
+    "randomforest": {
+      "type": "RandomForestClassifier",
+      "description": "综合特征驱动",
+      "features": [
+        "main_flow_rate",
+        "turnover_rate",
+        "volatility_20",
+        "rsi_combination",
+        "macd",
+        "atr_14",
+        "volume_ratio_5",
+        "price_position",
+        "main_flow_persistence",
+        "retail_panic_ratio"
+      ],
+      "params": {
+        "n_estimators": 200,
+        "max_depth": 10,
+        "min_samples_split": 50,
+        "min_samples_leaf": 20,
+        "class_weight": "balanced",
+        "random_state": 42,
+        "n_jobs": -1
+      }
+    }
+  },
+
+  "meta_learner": {
+    "type": "LogisticRegression",
+    "description": "学习基学习器的预测结果",
+    "params": {
+      "C": 1.0,
+      "penalty": "l2",
+      "solver": "lbfgs",
+      "class_weight": "balanced",
+      "random_state": 42,
+      "max_iter": 1000
+    }
+  },
+
+  "training": {
+    "n_folds": 5,
+    "cv_strategy": "StratifiedKFold",
+    "shuffle": true,
+    "random_state": 42
+  },
+
+  "data": {
+    "start_date": "2023-01-01",
+    "end_date": "2025-12-30",
+    "n_stocks": 200,
+    "min_return_threshold": 0.05,
+    "prediction_days": [3, 5]
+  },
+
+  "grading": {
+    "thresholds": {
+      "A": 0.75,
+      "B": 0.65,
+      "C": 0.55,
+      "D": 0.0
+    },
+    "position_weights": {
+      "A": 2.0,
+      "B": 1.5,
+      "C": 1.0,
+      "D": 0.0
+    },
+    "stop_loss_weights": {
+      "A": -0.08,
+      "B": -0.10,
+      "C": -0.12,
+      "D": -0.20
+    }
+  },
+
+  "expected_improvements": {
+    "precision": {
+      "baseline": 0.2796,
+      "target": 0.45,
+      "improvement": "预期提升至 45%（+60%）"
+    },
+    "recall": {
+      "baseline": 0.5954,
+      "target": 0.65,
+      "improvement": "预期提升至 65%（+9%）"
+    },
+    "f1": {
+      "baseline": 0.3805,
+      "target": 0.50,
+      "improvement": "预期提升至 0.50（+31%）"
+    },
+    "auc": {
+      "baseline": 0.9408,
+      "target": 0.95,
+      "improvement": "预期提升至 0.95（+1%）"
+    }
+  },
+
+  "advantages": [
+    "鲁棒性提升：多个模型互相补充，降低单一模型偏差",
+    "精度提升：集成学习理论保证性能优于单一模型",
+    "泛化能力：捕捉不同维度的信息",
+    "稳定性：减少过拟合风险"
+  ],
+
+  "challenges": [
+    "训练时间：需要训练多个基学习器",
+    "复杂度增加：模型数量增加，维护成本提高",
+    "特征工程：需要为不同模型设计不同的特征集",
+    "调参难度：需要调优多个模型的参数"
+  ],
+
+  "next_steps": [
+    "1. 训练 Stacking 集成模型",
+    "2. 评估性能并与 V5.0 对比",
+    "3. 分析元学习器的特征重要性",
+    "4. 优化基学习器的特征集",
+    "5. 部署到生产环境"
+  ]
+}

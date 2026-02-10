@@ -1,0 +1,129 @@
+{
+  "model_config": {
+    "model": "doubao-seed-1-6-251015"
+  },
+
+  "optimization_objectives": {
+    "primary": "在召回率≥70%约束下，最大化F1分数",
+    "secondary": "最大化精确率",
+    "constraints": {
+      "min_recall": 0.70,
+      "max_overfitting_gap": 0.20,
+      "min_precision": 0.50
+    }
+  },
+  
+  "feature_optimization": {
+    "capital_intensity": {
+      "weight": 0.40,
+      "features": [
+        "main_capital_inflow_ratio",
+        "large_order_ratio",
+        "capital_persistence",
+        "northbound_flow_ratio"
+      ],
+      "optimization_methods": ["quantile", "zscore", "relative", "model_based"]
+    },
+    
+    "market_sentiment": {
+      "weight": 0.35,
+      "features": [
+        "sector_heat_index",
+        "stock_sentiment_score",
+        "market_breadth",
+        "sentiment_cycle"
+      ],
+      "optimization_methods": ["quantile", "model_based"]
+    },
+    
+    "technical_momentum": {
+      "weight": 0.25,
+      "features": [
+        "rsi_6", "rsi_12", "rsi_24",
+        "volume_breakthrough",
+        "attack_pattern"
+      ],
+      "optimization_methods": ["grid_search", "bayesian"]
+    }
+  },
+  
+  "rsi_optimization": {
+    "periods": [6, 12, 14, 24],
+    "threshold_grid": {
+      "start": 30,
+      "end": 80,
+      "step": 5
+    },
+    "divergence_detection": true,
+    "dynamic_threshold": true
+  },
+  
+  "capital_intensity_optimization": {
+    "lookback_days": 60,
+    "rolling_quantiles": [0.80, 0.85, 0.90],
+    "zscore_threshold": 1.0,
+    "relative_threshold_multiplier": 1.5
+  },
+  
+  "constrained_optimization": {
+    "method": "scipy_minimize",
+    "algorithm": "Nelder-Mead",
+    "threshold_bounds": [0.3, 0.7],
+    "max_iterations": 100
+  },
+  
+  "dynamic_threshold_adjustment": {
+    "base_threshold": 0.5,
+    "adjustment_factors": {
+      "volatility_weight": 0.3,
+      "trend_weight": 0.4,
+      "performance_weight": 0.3
+    },
+    "volatility_thresholds": {
+      "high": 0.02,
+      "low": 0.005
+    },
+    "threshold_bounds": [0.3, 0.7]
+  },
+  
+  "multi_objective_optimization": {
+    "method": "optuna",
+    "sampler": "TPESampler",
+    "n_trials": 100,
+    "random_state": 42,
+    "optimization_metrics": {
+      "primary": "precision",
+      "constraint": "recall",
+      "penalty": "trade_count"
+    },
+    "trade_cost_penalty": 0.001
+  },
+  
+  "continuous_optimization": {
+    "daily_monitoring": {
+      "enabled": true,
+      "metrics": ["precision", "recall", "f1", "accuracy"]
+    },
+    "weekly_optimization": {
+      "enabled": true,
+      "retrain_window_days": 60
+    },
+    "monthly_retraining": {
+      "enabled": true,
+      "full_backtest": true
+    }
+  },
+  
+  "optimization_targets": {
+    "current": {
+      "precision": 0.3738,
+      "recall": 0.8287,
+      "f1": 0.5152
+    },
+    "target": {
+      "precision": [0.45, 0.50],
+      "recall": [0.70, 0.75],
+      "f1": [0.55, 0.60]
+    }
+  }
+}

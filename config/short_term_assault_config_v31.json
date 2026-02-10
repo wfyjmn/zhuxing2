@@ -1,0 +1,251 @@
+{
+  "strategy_name": "短期突击策略3.0修正版-印钞机捕捉",
+  "version": "3.1",
+  "core_philosophy": "理性克制、精准出手，主动捕捉高确定性'印钞机'股票",
+  "description": "摒弃'宁可错过100只'的消极表述，明确策略是'主动放弃低确定性、专注捕捉高确定性'，实现'出手即赚'",
+  
+  "optimization_goals": {
+    "precision": {
+      "target": 0.85,
+      "weight": 0.50,
+      "description": "核心核心指标，确保'出手即赚'，拒绝无效交易和亏损，筛选真正的'印钞机'股票"
+    },
+    "recall": {
+      "target_min": 0.30,
+      "target_max": 0.50,
+      "weight": 0.15,
+      "description": "允许错过模糊的、低确定性的上涨标的，但不放弃主动捕捉高确定性机会"
+    },
+    "overfitting_gap": {
+      "target": 0.15,
+      "weight": 0.20,
+      "description": "高精确率需依托强泛化能力，避免'回测精准、实盘失效'"
+    },
+    "sharpe_ratio": {
+      "target": 15.0,
+      "weight": 0.15,
+      "description": "兼顾风险与收益，'印钞机'股票需具备'高收益、低风险'特征"
+    }
+  },
+  
+  "feature_weights": {
+    "capital_strength": {"weight": 0.40, "description": "资金强度权重"},
+    "market_sentiment": {"weight": 0.35, "description": "市场情绪权重"},
+    "technical_momentum": {"weight": 0.25, "description": "技术动量权重"}
+  },
+  
+  "feature_thresholds": {
+    "capital_strength": {
+      "main_capital_inflow_ratio": {"threshold": 0.05, "description": "主力资金净流入占比必须>5%"},
+      "large_order_buy_rate": {"threshold": 0.30, "description": "大单净买入率必须>30%"},
+      "capital_inflow_persistence": {"threshold": 0.67, "description": "资金流入持续性必须≥2/3"},
+      "northbound_capital_flow": {"threshold": 0.02, "description": "北向资金流入必须>2%"}
+    },
+    "market_sentiment": {
+      "sector_heat_index": {"threshold": 0.30, "description": "板块热度指数必须>0.3"},
+      "stock_sentiment_score": {"threshold": 70.0, "description": "个股情绪得分必须>70"},
+      "up_days_ratio": {"threshold": 0.60, "description": "上涨天数占比必须>60%"},
+      "sentiment_cycle_position": {"threshold": 0.50, "description": "情绪周期位置必须>0.5"}
+    },
+    "technical_momentum": {
+      "enhanced_rsi": {"threshold": 60.0, "description": "增强RSI必须>60"},
+      "volume_price_breakout_strength": {"threshold": 2.0, "description": "量价突破强度必须>2倍"},
+      "intraday_attack_pattern": {"threshold": 1, "description": "盘中攻击形态必须存在"}
+    }
+  },
+  
+  "triple_confirmation": {
+    "description": "三重确认机制（仅保留A级信号）",
+    "capital_confirmation": {
+      "description": "资金维度必须满足全部必须项",
+      "requirements": [
+        "连续2日净流入",
+        "大单买入占比>25%",
+        "资金流入速度加快"
+      ],
+      "strict_mode": true
+    },
+    "sentiment_confirmation": {
+      "description": "情绪维度必须满足",
+      "requirements": [
+        "板块涨幅前30%",
+        "市场普涨",
+        "板块有涨停龙头"
+      ],
+      "strict_mode": true
+    },
+    "technical_confirmation": {
+      "description": "技术维度必须满足",
+      "requirements": [
+        "RSI(6)>60",
+        "MACD金叉",
+        "量比>1.5",
+        "价格突破20日高点"
+      ],
+      "strict_mode": true
+    },
+    "a_signal_criteria": {
+      "description": "A级信号标准（仅A级可出手）",
+      "requirements": [
+        "资金维度必须满足全部必须项",
+        "情绪维度必须满足全部必须项",
+        "技术维度必须满足全部必须项"
+      ]
+    },
+    "abandon_bc_signals": {
+      "description": "主动放弃B/C级信号",
+      "reason": "理性克制，主动放弃模糊机会，专注捕捉高确定性标的"
+    }
+  },
+  
+  "sample_purification": {
+    "description": "正样本提纯逻辑",
+    "positive_sample": {
+      "min_actual_return": 0.15,
+      "min_prediction_prob": 0.90,
+      "must_satisfy_triple_confirmation": true,
+      "description": "仅保留实际收益≥15%、上涨概率≥90%、满足三重确认的样本"
+    },
+    "negative_sample": {
+      "description": "负样本仅保留明确下跌、资金大幅流出的样本",
+      "min_actual_return": -0.05,
+      "max_prediction_prob": 0.30
+    }
+  },
+  
+  "model_config": {
+    "framework": "XGBoost",
+    "description": "切换到XGBoost模型，聚焦高精确率训练",
+    "xgboost_params": {
+      "objective": "binary:logistic",
+      "eval_metric": "auc",
+      "max_depth": 6,
+      "eta": 0.1,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "min_child_weight": 3,
+      "gamma": 0.5,
+      "lambda": 2.0,
+      "alpha": 1.0,
+      "scale_pos_weight": 3.0,
+      "seed": 42,
+      "early_stopping_rounds": 40,
+      "metric_for_early_stopping": "precision",
+      "min_precision_threshold": 0.80
+    },
+    "training_orientation": {
+      "description": "放弃'平衡召回与精确'的训练逻辑，设置模型'偏向精确率+主动匹配'",
+      "precision_weight": 3.0,
+      "recall_weight": 1.0,
+      "false_positive_penalty": 5.0,
+      "false_negative_penalty": 2.0
+    }
+  },
+  
+  "money_machine_features": {
+    "description": "印钞机股票专属特征",
+    "sector_leader": {
+      "description": "板块龙头标识",
+      "criteria": {
+        "market_cap_top_percent": 10,
+        "return_top_percent": 5
+      }
+    },
+    "return_certainty": {
+      "description": "收益确定性特征",
+      "criteria": {
+        "continuous_inflow_days": 3,
+        "perfect_technical_pattern": true
+      }
+    }
+  },
+  
+  "signal_trigger": {
+    "description": "信号触发提醒逻辑",
+    "trigger_conditions": {
+      "must_satisfy_triple_confirmation": true,
+      "precision_threshold": 0.85,
+      "sharpe_ratio_min": 15.0
+    },
+    "alert_mechanism": {
+      "description": "避免'盲目出手'的同时，也避免'错过高确定性机会'",
+      "methods": ["email", "wechat", "sms"]
+    }
+  },
+  
+  "risk_management": {
+    "description": "风控规则（适配印钞机股票）",
+    "for_a_signals": {
+      "stop_loss": 0.03,
+      "stop_loss_description": "无条件止损，避免小亏损扩大",
+      "take_profit_initial": 0.20,
+      "take_profit_description": "盈利达标后部分止盈",
+      "trailing_stop_loss": 0.05,
+      "trailing_stop_description": "最高点回落5%即止盈"
+    },
+    "filters": {
+      "liquidity": {
+        "description": "流动性筛选，排除小盘股",
+        "min_market_cap": 5000000000,
+        "min_daily_turnover": 10000000
+      },
+      "sustainability": {
+        "description": "持续性筛选，排除'一日游'上涨",
+        "min_continuous_rise_days": 2
+      },
+      "risk": {
+        "description": "风险筛选，排除ST股、有负面催化剂",
+        "exclude_st": true,
+        "exclude_negative_news": true
+      }
+    }
+  },
+  
+  "dynamic_monitoring": {
+    "description": "动态监控，聚焦精确率维护+主动调整",
+    "daily_monitoring": {
+      "precision_min": 0.85,
+      "profit_loss_ratio_min": 3.0,
+      "target_trigger_count": 5,
+      "description": "确保有合理的出手机会，避免消极不动"
+    },
+    "weekly_monitoring": {
+      "overfitting_gap_max": 0.15,
+      "feature_effectiveness_check": true
+    },
+    "monthly_monitoring": {
+      "model_stability_check": true
+    },
+    "adjustment_rules": {
+      "precision_below_target": {
+        "continuous_days": 3,
+        "actions": ["sample_purification", "feature_reslection", "parameter_tuning"]
+      },
+      "no_target_triggered": {
+        "duration": "1_week",
+        "actions": ["slightly_early_conditions_without_lowering_precision"]
+      }
+    }
+  },
+  
+  "model_iteration": {
+    "description": "模型迭代+机会捕捉机制",
+    "data_update": {
+      "method": "incremental",
+      "frequency": "daily"
+    },
+    "sample_purification_frequency": "weekly",
+    "market_adaptation": {
+      "bear_market": "更严苛化资金筛选条件",
+      "bull_market": "适当放宽筛选条件但不降低精确率"
+    }
+  },
+  
+  "enhanced_rsi_strategy": {
+    "rsi_combination": {
+      "short_term": {"weight": 0.4, "period": 6},
+      "medium_term": {"weight": 0.35, "period": 12},
+      "long_term": {"weight": 0.25, "period": 24}
+    }
+  }
+}

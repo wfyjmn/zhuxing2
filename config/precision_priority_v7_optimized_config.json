@@ -1,0 +1,210 @@
+{
+  "strategy_name": "精确率优先策略（优化版）",
+  "version": "7.1_Precision_Optimized",
+  "description": "基于V7.0的优化版本：降低过拟合、提升泛化能力",
+
+  "optimization_priority": {
+    "precision": {
+      "target": 0.70,
+      "weight": 0.60,
+      "description": "精确率目标提升至 70%"
+    },
+    "auc": {
+      "target": 0.90,
+      "weight": 0.30,
+      "description": "AUC目标调整为 0.90（更现实）"
+    },
+    "recall": {
+      "target": 0.30,
+      "weight": 0.10,
+      "description": "召回率目标调整为 30%"
+    }
+  },
+
+  "base_models": {
+    "xgboost": {
+      "type": "XGBoostClassifier",
+      "description": "主力资金驱动（增强正则化）",
+      "features": [
+        "main_flow_rate",
+        "main_flow_persistence",
+        "main_control_proxy",
+        "retail_panic_ratio",
+        "main_net_inflow_ma5",
+        "capital_acceleration",
+        "turnover_rate",
+        "volume_ratio_5",
+        "volume_ratio_20"
+      ],
+      "params": {
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "n_estimators": 1000,
+        "scale_pos_weight": 8.0,
+        "subsample": 0.7,
+        "colsample_bytree": 0.7,
+        "min_child_weight": 5,
+        "gamma": 0.3,
+        "reg_alpha": 0.5,
+        "reg_lambda": 2.0,
+        "random_state": 42,
+        "n_jobs": -1
+      }
+    },
+    "lightgbm": {
+      "type": "LGBMClassifier",
+      "description": "技术指标驱动（增强正则化）",
+      "features": [
+        "rsi_6",
+        "rsi_12",
+        "rsi_combination",
+        "macd",
+        "macd_hist",
+        "atr_14",
+        "volatility_20",
+        "price_above_ma5",
+        "ma_bullish_arrangement",
+        "volume_ratio_5",
+        "volume_ratio_20"
+      ],
+      "params": {
+        "learning_rate": 0.03,
+        "num_leaves": 15,
+        "n_estimators": 1000,
+        "bagging_fraction": 0.6,
+        "feature_fraction": 0.6,
+        "min_child_samples": 50,
+        "reg_alpha": 0.5,
+        "reg_lambda": 2.0,
+        "is_unbalance": true,
+        "random_state": 42,
+        "n_jobs": -1,
+        "verbose": -1
+      }
+    },
+    "randomforest": {
+      "type": "RandomForestClassifier",
+      "description": "综合特征驱动（增强正则化）",
+      "features": [
+        "main_flow_rate",
+        "turnover_rate",
+        "volatility_20",
+        "rsi_combination",
+        "macd",
+        "atr_14",
+        "volume_ratio_5",
+        "main_flow_persistence",
+        "retail_panic_ratio"
+      ],
+      "params": {
+        "n_estimators": 300,
+        "max_depth": 6,
+        "min_samples_split": 150,
+        "min_samples_leaf": 80,
+        "max_features": "sqrt",
+        "class_weight": "balanced",
+        "random_state": 42,
+        "n_jobs": -1
+      }
+    }
+  },
+
+  "meta_learner": {
+    "type": "LogisticRegression",
+    "description": "学习基学习器的预测结果（增强正则化）",
+    "params": {
+      "C": 0.3,
+      "penalty": "l2",
+      "solver": "lbfgs",
+      "class_weight": "balanced",
+      "random_state": 42,
+      "max_iter": 2000,
+      "tol": 0.00001
+    }
+  },
+
+  "training": {
+    "n_folds": 5,
+    "cv_strategy": "StratifiedKFold",
+    "shuffle": true,
+    "random_state": 42,
+    "early_stopping_rounds": 50
+  },
+
+  "data": {
+    "start_date": "2022-02-03",
+    "end_date": "2025-02-03",
+    "n_stocks": 300,
+    "min_return_threshold": 0.08,
+    "prediction_days": [5, 10],
+    "train_test_split": 0.8,
+    "balance_strategy": "oversample",
+    "oversample_ratio": 0.5
+  },
+
+  "threshold_optimization": {
+    "strategy": "precision_target",
+    "target_precision": 0.70,
+    "threshold_range": [0.5, 0.95],
+    "search_method": "binary_search",
+    "step_size": 0.001,
+    "min_samples": 50
+  },
+
+  "grading": {
+    "thresholds": {
+      "A": 0.85,
+      "B": 0.75,
+      "C": 0.65,
+      "D": 0.0
+    },
+    "position_weights": {
+      "A": 3.0,
+      "B": 2.0,
+      "C": 1.0,
+      "D": 0.0
+    },
+    "stop_loss_weights": {
+      "A": -0.06,
+      "B": -0.08,
+      "C": -0.10,
+      "D": -0.20
+    }
+  },
+
+  "optimization_changes": {
+    "data_balance": {
+      "before": "1:1（完全平衡）",
+      "after": "1:2（减少过采样）",
+      "reason": "减少SMOTE引入的噪声，提升泛化能力"
+    },
+    "regularization": {
+      "xgboost": {
+        "gamma": "0.1 → 0.3",
+        "reg_alpha": "0.1 → 0.5",
+        "reg_lambda": "1.0 → 2.0"
+      },
+      "lightgbm": {
+        "min_child_samples": "30 → 50",
+        "bagging_fraction": "0.7 → 0.6",
+        "feature_fraction": "0.7 → 0.6"
+      },
+      "randomforest": {
+        "max_depth": "8 → 6",
+        "min_samples_split": "100 → 150",
+        "min_samples_leaf": "50 → 80"
+      }
+    },
+    "early_stopping": {
+      "before": "100",
+      "after": "50",
+      "reason": "更早停止，避免过拟合"
+    },
+    "target_adjustment": {
+      "precision": "60% → 70%",
+      "recall": "35% → 30%",
+      "auc": "96% → 90%",
+      "reason": "更现实的目标，平衡精确率与召回率"
+    }
+  }
+}

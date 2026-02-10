@@ -1,0 +1,248 @@
+{
+  "strategy_type": "aggressive",
+  "description": "进攻型交易系统配置 - 从保守型转为进攻型，追求更高收益",
+  
+  "xgboost": {
+    "model_path": "assets/models/aggressive_model.pkl",
+    "model_metadata_path": "assets/models/aggressive_model_metadata.json",
+    "threshold": 0.4,
+    
+    "params": {
+      "objective": "binary:logistic",
+      "eval_metric": ["auc", "f1_score"],
+      "max_depth": 8,
+      "learning_rate": 0.03,
+      "subsample": 0.75,
+      "colsample_bytree": 0.7,
+      "min_child_weight": 3,
+      "gamma": 0.5,
+      "reg_alpha": 0,
+      "reg_lambda": 1,
+      "scale_pos_weight": 2.0,
+      "max_delta_step": 1,
+      "n_estimators": 800,
+      "early_stopping_rounds": 50
+    },
+    
+    "best_score": 0.65
+  },
+  
+  "sample_weight": {
+    "strategy": "dynamic_return_based",
+    "method": "return_gradient_weighting",
+    
+    "weight_config": {
+      "high_return_threshold": 0.05,
+      "high_return_weight": 3.0,
+      
+      "moderate_return_threshold": 0.02,
+      "moderate_return_weight": 2.0,
+      
+      "low_return_weight": 1.0,
+      
+      "negative_return_weight": 0.5
+    },
+    
+    "momentum_boost": {
+      "enabled": true,
+      "consecutive_rise_days": 3,
+      "boost_factor": 1.5
+    }
+  },
+  
+  "label_definition": {
+    "primary_label": "aggressive",
+    "threshold": 0.02,
+    
+    "multi_label": {
+      "enabled": true,
+      "labels": {
+        "conservative": 0.0,
+        "moderate": 0.01,
+        "aggressive": 0.02,
+        "momentum": "consecutive_rise_3d"
+      }
+    }
+  },
+  
+  "features": {
+    "total_count": 35,
+    
+    "aggressive_features": [
+      "breakout_new_high_20d",
+      "volume_surge_ratio",
+      "rsi_overbought_oversold",
+      "macd_golden_cross",
+      "limit_up_effect",
+      "sector_rotation_strength",
+      "leader_stock_linkage",
+      "money_flow_intensity",
+      "volatility_skewness",
+      "max_single_day_gain",
+      "consecutive_rise_days",
+      "momentum_strength_5d",
+      "momentum_strength_10d",
+      "price_momentum_3d",
+      "volume_price_surge"
+    ],
+    
+    "defensive_features": [
+      "ma5", "ma10", "ma20", "ma60",
+      "volume_ratio", "turnover_ratio",
+      "rsi", "macd", "kdj_k", "kdj_d", "kdj_j",
+      "boll_upper", "boll_mid", "boll_lower"
+    ],
+    
+    "reduced_weight_features": [
+      "amplitude",
+      "high_low_ratio"
+    ]
+  },
+  
+  "trading_strategy": {
+    "threshold_strategy": "multi_level",
+    
+    "buy_thresholds": {
+      "high_confidence": 0.6,
+      "medium_confidence": 0.4,
+      "low_confidence": 0.3
+    },
+    
+    "position_sizing": {
+      "high_confidence": 0.8,
+      "medium_confidence": 0.5,
+      "low_confidence": 0.2
+    },
+    
+    "stop_loss": {
+      "aggressive": 0.03,
+      "normal": 0.05,
+      "loose": 0.08,
+      "trailing_stop": 0.05
+    },
+    
+    "take_profit": {
+      "quick": 0.05,
+      "moderate": 0.10,
+      "runner": 0.15,
+      "staged_profit_taking": {
+        "level_1": {"threshold": 0.05, "reduce_ratio": 0.2},
+        "level_2": {"threshold": 0.10, "reduce_ratio": 0.3},
+        "level_3": {"threshold": 0.15, "reduce_ratio": 0.5}
+      }
+    },
+    
+    "max_position_per_stock": 0.05,
+    "max_total_position": 0.95
+  },
+  
+  "risk_management": {
+    "strategy": "active_risk_control",
+    
+    "volatility_adjustment": {
+      "enabled": true,
+      "low_vol_threshold": 0.015,
+      "high_vol_threshold": 0.035,
+      "low_vol_multiplier": 1.2,
+      "high_vol_multiplier": 0.7
+    },
+    
+    "sector_diversification": {
+      "max_single_sector": 0.30,
+      "min_sectors": 3
+    },
+    
+    "sentiment_monitor": {
+      "enabled": true,
+      "overheat_threshold": 0.8,
+      "fear_threshold": 0.2,
+      "adjust_factor": 0.5
+    },
+    
+    "correlation_control": {
+      "max_correlation": 0.7,
+      "min_diversified_stocks": 10
+    }
+  },
+  
+  "ensemble": {
+    "enabled": true,
+    "models": {
+      "momentum_model": {
+        "type": "xgboost",
+        "feature_set": "momentum_features",
+        "weight": 0.35
+      },
+      "reversal_model": {
+        "type": "xgboost",
+        "feature_set": "reversal_features",
+        "weight": 0.25
+      },
+      "volume_model": {
+        "type": "xgboost",
+        "feature_set": "volume_features",
+        "weight": 0.25
+      },
+      "sector_model": {
+        "type": "xgboost",
+        "feature_set": "sector_features",
+        "weight": 0.15
+      }
+    },
+    
+    "voting_strategy": "weighted_voting",
+    "aggressive_mode": true,
+    "min_agree_models": 2
+  },
+  
+  "performance_targets": {
+    "primary": {
+      "recall_min": 0.70,
+      "recall_target": 0.75,
+      "precision_min": 0.60,
+      "f1_min": 0.65
+    },
+    
+    "investment": {
+      "annual_return_target": 0.20,
+      "annual_return_min": 0.15,
+      "max_drawdown_max": -0.08,
+      "sharpe_ratio_min": 2.5,
+      "win_rate_min": 0.60
+    },
+    
+    "trading": {
+      "trade_frequency": "medium",
+      "avg_holding_period": 5,
+      "turnover_rate": 0.8
+    }
+  },
+  
+  "training": {
+    "sample_selection": {
+      "focus_periods": ["bull_market", "rebound", "breakout"],
+      "underweight_periods": ["consolidation", "slow_decline"],
+      "sample_reweighting": "return_index_weighted"
+    },
+    
+    "validation": {
+      "time_series_split": true,
+      "walk_forward_validation": true,
+      "rolling_window_size": 252,
+      "test_periods": 4
+    },
+    
+    "early_stopping": {
+      "enabled": true,
+      "patience": 50,
+      "min_delta": 0.001
+    }
+  },
+  
+  "cache": {
+    "model_cache_dir": "assets/models",
+    "data_cache_dir": "assets/data",
+    "log_dir": "assets/logs",
+    "backup_count": 10
+  }
+}

@@ -1,0 +1,314 @@
+{
+  "strategy_name": "短期突击特征权重体系",
+  "core_philosophy": "少错过，不犯错，全身而退",
+  "version": "3.0",
+  
+  "optimization_goals": {
+    "recall": {
+      "target": 0.80,
+      "weight": 0.40,
+      "description": "召回率>80%，抓住绝大多数上涨机会，实现'少错过'"
+    },
+    "precision": {
+      "target": 0.50,
+      "weight": 0.35,
+      "description": "精确率>50%，出击必中，减少无效交易，实现'不犯错'"
+    },
+    "overfitting_gap": {
+      "target": 0.20,
+      "weight": 0.15,
+      "description": "过拟合差距<20%，确保泛化能力，实现'全身而退'"
+    },
+    "sharpe_ratio": {
+      "target": 20.0,
+      "weight": 0.10,
+      "description": "夏普比率>20，风险调整后收益优秀"
+    }
+  },
+
+  "feature_weights": {
+    "capital_strength": {
+      "weight": 0.40,
+      "description": "核心维度1：资金强度",
+      "features": [
+        {
+          "name": "主力资金净流入占比",
+          "weight": 0.15,
+          "calculation": "主力资金净流入/成交额",
+          "threshold": ">5%为强流入"
+        },
+        {
+          "name": "大单净买入率",
+          "weight": 0.10,
+          "calculation": "大单买入额/总买入额",
+          "threshold": ">30%为强信号"
+        },
+        {
+          "name": "资金流入持续性",
+          "weight": 0.08,
+          "calculation": "连续净流入天数",
+          "threshold": "≥3天为佳"
+        },
+        {
+          "name": "北向资金流入",
+          "weight": 0.07,
+          "calculation": "北向资金净买入额",
+          "threshold": "板块内排名前20%"
+        }
+      ]
+    },
+    "market_sentiment": {
+      "weight": 0.35,
+      "description": "核心维度2：市场情绪",
+      "features": [
+        {
+          "name": "板块热度指数",
+          "weight": 0.12,
+          "calculation": "板块内涨停家数/板块总家数",
+          "threshold": ">10%为过热"
+        },
+        {
+          "name": "个股情绪得分",
+          "weight": 0.10,
+          "calculation": "基于龙虎榜、股吧热度等综合",
+          "threshold": ">70分(0-100)"
+        },
+        {
+          "name": "市场广度指标",
+          "weight": 0.08,
+          "calculation": "上涨家数/总家数",
+          "threshold": ">60%为普涨"
+        },
+        {
+          "name": "情绪周期位置",
+          "weight": 0.05,
+          "calculation": "情绪指标在周期中的位置",
+          "threshold": "上升初期或主升段"
+        }
+      ]
+    },
+    "technical_momentum": {
+      "weight": 0.25,
+      "description": "核心维度3：技术动量",
+      "features": [
+        {
+          "name": "RSI强化版",
+          "weight": 0.10,
+          "calculation": "RSI(6) + RSI(12) + RSI(24)加权",
+          "threshold": "综合>60且至少两个周期>50"
+        },
+        {
+          "name": "量价突破强度",
+          "weight": 0.08,
+          "calculation": "成交量放大倍数 × 涨幅",
+          "threshold": ">2倍为强突破"
+        },
+        {
+          "name": "分时图攻击形态",
+          "weight": 0.07,
+          "calculation": "分时图均线突破+放量形态识别",
+          "threshold": "存在明显攻击波"
+        }
+      ]
+    }
+  },
+
+  "enhanced_rsi_strategy": {
+    "rsi_combination": {
+      "short_term": {
+        "period": 6,
+        "weight": 0.4,
+        "sensitivity": "高"
+      },
+      "medium_term": {
+        "period": 12,
+        "weight": 0.3,
+        "sensitivity": "中"
+      },
+      "long_term": {
+        "period": 24,
+        "weight": 0.3,
+        "sensitivity": "低"
+      }
+    },
+    "dynamic_thresholds": {
+      "bull_market": {
+        "buy": 65,
+        "sell": 85
+      },
+      "range_market": {
+        "buy": 50,
+        "sell": 70
+      },
+      "bear_market": {
+        "buy": 40,
+        "sell": 60
+      }
+    },
+    "divergence_detection": {
+      "top_divergence": "价格创新高但RSI未创新高，谨慎",
+      "bottom_divergence": "价格创新低但RSI未创新低，机会"
+    }
+  },
+
+  "triple_confirmation": {
+    "capital_confirmation": {
+      "must_have": [
+        "主力资金连续2日净流入",
+        "大单买入占比>25%",
+        "资金流入速度加快(今日>昨日20%)"
+      ],
+      "preferred": [
+        "北向资金同向流入",
+        "机构席位净买入",
+        "板块整体资金流入"
+      ],
+      "exclusion": [
+        "主力资金大幅流出(>5%)",
+        "大单卖出占比>30%",
+        "连续3日资金流出"
+      ]
+    },
+    "sentiment_confirmation": {
+      "market_level": {
+        "index_environment": "上证指数在20日线上方",
+        "up_down_ratio": "上涨家数>下跌家数",
+        "limit_up_effect": "涨停家数>跌停家数2倍以上"
+      },
+      "sector_level": {
+        "sector_rank": "所属板块涨幅排名前30%",
+        "sector_strength": "板块指数突破关键位置",
+        "leader_effect": "板块内有涨停龙头"
+      },
+      "individual_level": {
+        "popularity": "讨论量排名前20%",
+        "news": "有正向催化剂",
+        "pattern": "突破形态完整"
+      }
+    },
+    "technical_confirmation": {
+      "momentum_indicators": [
+        "RSI(6)>60",
+        "MACD金叉且红柱放大",
+        "KDJ金叉且J值>50"
+      ],
+      "volume_price": [
+        "成交量较20日均量放大>50%",
+        "价格突破20日高点",
+        "量比>1.5"
+      ],
+      "time_cycles": [
+        "日线、60分钟线同步看多",
+        "调整时间充分(至少3天以上)",
+        "突破发生在早盘或尾盘关键时段"
+      ]
+    }
+  },
+
+  "signal_grading": {
+    "A_grade": {
+      "name": "A级信号",
+      "conditions": "三重确认全部满足",
+      "position_ratio": 1.0,
+      "stop_loss": 0.03,
+      "trailing_stop": true,
+      "expected_holding_days": "3-5"
+    },
+    "B_grade": {
+      "name": "B级信号",
+      "conditions": "满足两重确认",
+      "position_ratio": 0.6,
+      "stop_loss": 0.05,
+      "trailing_stop": false,
+      "expected_holding_days": "2-3"
+    },
+    "C_grade": {
+      "name": "C级信号",
+      "conditions": "仅满足资金强度",
+      "position_ratio": 0.3,
+      "stop_loss": 0.08,
+      "trailing_stop": false,
+      "expected_holding_days": "1-2"
+    }
+  },
+
+  "trading_execution": {
+    "entry_timing": {
+      "preferred": [
+        "早盘30分钟内放量突破",
+        "尾盘30分钟内资金抢筹",
+        "盘中回调至关键支撑位"
+      ],
+      "avoid": [
+        "开盘冲高无持续性",
+        "尾盘偷袭无量拉升",
+        "大盘跳水时的逆势拉升"
+      ]
+    },
+    "exit_strategy": {
+      "take_profit": [
+        "盈利10%减仓1/3",
+        "盈利20%再减仓1/3",
+        "剩余仓位移动止盈(最高点回落8%)"
+      ],
+      "stop_loss": {
+        "A_grade": "亏损3%无条件止损",
+        "B_grade": "亏损5%无条件止损",
+        "C_grade": "亏损8%无条件止损"
+      }
+    }
+  },
+
+  "model_params": {
+    "xgboost": {
+      "max_depth": 5,
+      "reg_lambda": 3,
+      "reg_alpha": 0.5,
+      "gamma": 0.8,
+      "subsample": 0.7,
+      "colsample_bytree": 0.65,
+      "colsample_bylevel": 0.7,
+      "min_child_weight": 2,
+      "max_delta_step": 2,
+      "scale_pos_weight": 2.0,
+      "learning_rate": 0.025,
+      "n_estimators": 600,
+      "early_stopping_rounds": 40,
+      "eval_metric": ["auc", "logloss"],
+      "objective": "binary:logistic",
+      "random_state": 42
+    }
+  },
+
+  "risk_management": {
+    "position_sizing": {
+      "single_stock_limit": 0.05,
+      "sector_limit": 0.15,
+      "bull_market": 0.90,
+      "range_market": 0.60,
+      "bear_market": 0.30
+    },
+    "market_condition_adjustment": {
+      "bull_market": {
+        "position": "80-90%",
+        "stop_loss": "宽松(5-8%)",
+        "holding_time": "可适当延长"
+      },
+      "range_market": {
+        "position": "50-70%",
+        "stop_loss": "严格(3-5%)",
+        "holding_time": "短线为主(3-7天)"
+      },
+      "bear_market": {
+        "position": "20-40%",
+        "stop_loss": "非常严格(2-3%)",
+        "holding_time": "超短线(1-3天)"
+      }
+    },
+    "performance_monitoring": {
+      "daily": ["胜率", "盈亏比", "最大回撤"],
+      "weekly": ["夏普比率", "过拟合程度", "特征有效性"],
+      "monthly": ["模型稳定性", "市场适应性", "参数优化"]
+    }
+  }
+}

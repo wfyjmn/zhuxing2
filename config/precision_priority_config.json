@@ -1,0 +1,67 @@
+{
+  "strategy_name": "F1分数优先自动化参数调优（改进版）",
+  "core_philosophy": "平衡精确率和召回率，少错过且不犯错",
+  "version": "2.0",
+
+  "data": {
+    "start_date": "2020-01-01",
+    "end_date": "2026-01-05",
+    "min_return_threshold": 0.05,
+    "prediction_days": [3, 4, 5],
+    "n_stocks": 300
+  },
+
+  "optuna": {
+    "n_trials": 100,
+    "timeout": 14400,
+    "direction": "maximize",
+    "metric": "f1",
+    "cv_folds": 3,
+    "early_stopping_rounds": 50
+  },
+
+  "threshold": {
+    "target_precision": 0.65,
+    "target_recall": 0.65,
+    "threshold_range": [0.30, 0.60],
+    "threshold_step": 0.01
+  },
+
+  "optimization_goals": {
+    "precision": {
+      "target": 0.65,
+      "weight": 0.8,
+      "description": "精确率>65%，确保预测的股票有较高的上涨概率"
+    },
+    "recall": {
+      "target": 0.65,
+      "weight": 0.8,
+      "description": "召回率>65%，在保证精确率的前提下尽可能抓住机会"
+    },
+    "f1": {
+      "target": 0.65,
+      "weight": 1.0,
+      "description": "F1分数>65%，平衡精确率和召回率"
+    },
+    "auc": {
+      "target": 0.75,
+      "weight": 0.5,
+      "description": "AUC>0.75，模型整体判别能力良好"
+    }
+  },
+
+  "feature_weights": {
+    "capital_strength": {
+      "weight": 0.40,
+      "description": "核心维度1：资金强度"
+    },
+    "market_sentiment": {
+      "weight": 0.35,
+      "description": "核心维度2：市场情绪"
+    },
+    "technical_momentum": {
+      "weight": 0.25,
+      "description": "核心维度3：技术动量"
+    }
+  }
+}

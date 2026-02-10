@@ -1,0 +1,10 @@
+{
+  "token": "",
+  "timeout": 30,
+  "retry_count": 3,
+  "api_base": "https://api.tushare.pro",
+  "max_workers": 5,
+  "rate_limit_delay": 0.1,
+  "cache_expiry_hours": 24,
+  "comment": "Token已移除，请使用 .env 环境变量配置"
+}

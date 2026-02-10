@@ -1,0 +1,214 @@
+{
+  "strategy_name": "精确率优先策略",
+  "version": "7.0_Precision_Focus",
+  "description": "以精确率为核心目标的优化策略",
+
+  "optimization_priority": {
+    "precision": {
+      "target": 0.60,
+      "weight": 0.60,
+      "description": "精确率 > 60%"
+    },
+    "auc": {
+      "target": 0.96,
+      "weight": 0.30,
+      "description": "AUC > 0.96"
+    },
+    "recall": {
+      "target": 0.35,
+      "weight": 0.10,
+      "description": "召回率可降低至 35%"
+    }
+  },
+
+  "base_models": {
+    "xgboost": {
+      "type": "XGBoostClassifier",
+      "description": "主力资金驱动",
+      "features": [
+        "main_flow_rate",
+        "main_flow_persistence",
+        "main_control_proxy",
+        "retail_panic_ratio",
+        "main_net_inflow_ma5",
+        "capital_acceleration",
+        "turnover_rate",
+        "volume_ratio_5",
+        "volume_ratio_20"
+      ],
+      "params": {
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "n_estimators": 1000,
+        "scale_pos_weight": 8.0,
+        "subsample": 0.7,
+        "colsample_bytree": 0.7,
+        "min_child_weight": 5,
+        "gamma": 0.1,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "random_state": 42,
+        "n_jobs": -1
+      }
+    },
+    "lightgbm": {
+      "type": "LGBMClassifier",
+      "description": "技术指标驱动",
+      "features": [
+        "rsi_6",
+        "rsi_12",
+        "rsi_combination",
+        "macd",
+        "macd_hist",
+        "atr_14",
+        "volatility_20",
+        "price_above_ma5",
+        "ma_bullish_arrangement",
+        "volume_ratio_5",
+        "volume_ratio_20"
+      ],
+      "params": {
+        "learning_rate": 0.03,
+        "num_leaves": 15,
+        "n_estimators": 1000,
+        "bagging_fraction": 0.7,
+        "feature_fraction": 0.7,
+        "min_child_samples": 30,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "is_unbalance": true,
+        "random_state": 42,
+        "n_jobs": -1,
+        "verbose": -1
+      }
+    },
+    "randomforest": {
+      "type": "RandomForestClassifier",
+      "description": "综合特征驱动",
+      "features": [
+        "main_flow_rate",
+        "turnover_rate",
+        "volatility_20",
+        "rsi_combination",
+        "macd",
+        "atr_14",
+        "volume_ratio_5",
+        "main_flow_persistence",
+        "retail_panic_ratio"
+      ],
+      "params": {
+        "n_estimators": 300,
+        "max_depth": 8,
+        "min_samples_split": 100,
+        "min_samples_leaf": 50,
+        "max_features": "sqrt",
+        "class_weight": "balanced",
+        "random_state": 42,
+        "n_jobs": -1
+      }
+    }
+  },
+
+  "meta_learner": {
+    "type": "LogisticRegression",
+    "description": "学习基学习器的预测结果",
+    "params": {
+      "C": 0.5,
+      "penalty": "l2",
+      "solver": "lbfgs",
+      "class_weight": "balanced",
+      "random_state": 42,
+      "max_iter": 2000,
+      "tol": 0.00001
+    }
+  },
+
+  "training": {
+    "n_folds": 5,
+    "cv_strategy": "StratifiedKFold",
+    "shuffle": true,
+    "random_state": 42,
+    "early_stopping_rounds": 100
+  },
+
+  "data": {
+    "start_date": "2022-02-03",
+    "end_date": "2025-02-03",
+    "n_stocks": 300,
+    "min_return_threshold": 0.08,
+    "prediction_days": [5, 10],
+    "train_test_split": 0.8,
+    "balance_strategy": "oversample"
+  },
+
+  "threshold_optimization": {
+    "strategy": "precision_target",
+    "target_precision": 0.60,
+    "threshold_range": [0.5, 0.95],
+    "search_method": "binary_search",
+    "step_size": 0.001,
+    "min_samples": 50
+  },
+
+  "grading": {
+    "thresholds": {
+      "A": 0.85,
+      "B": 0.75,
+      "C": 0.65,
+      "D": 0.0
+    },
+    "position_weights": {
+      "A": 3.0,
+      "B": 2.0,
+      "C": 1.0,
+      "D": 0.0
+    },
+    "stop_loss_weights": {
+      "A": -0.06,
+      "B": -0.08,
+      "C": -0.10,
+      "D": -0.20
+    }
+  },
+
+  "expected_improvements": {
+    "precision": {
+      "baseline": 0.4501,
+      "target": 0.60,
+      "improvement": "预期提升至 60%"
+    },
+    "auc": {
+      "baseline": 0.94,
+      "target": 0.96,
+      "improvement": "预期提升至 0.96"
+    },
+    "recall": {
+      "baseline": 0.4796,
+      "target": 0.35,
+      "trade_off": "召回率可降低至 35%"
+    }
+  },
+
+  "optimization_techniques": [
+    "提高决策阈值",
+    "增加正样本权重",
+    "更保守的参数",
+    "特征筛选",
+    "交叉验证",
+    "早停机制"
+  ],
+
+  "risk_control": {
+    "max_drawdown": 0.15,
+    "max_position": 0.30,
+    "position_limit_per_stock": 0.05
+  },
+
+  "next_steps": [
+    "训练精确率优先模型",
+    "优化决策阈值",
+    "评估模型性能",
+    "对比 V6.0 性能",
+    "实盘验证"
+  ]
+}
