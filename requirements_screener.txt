@@ -1,0 +1,10 @@
+# DeepQuant 选股系统 - Python依赖包
+# 安装命令: pip install -r requirements_screener.txt
+
+# 核心依赖
+tushare==1.4.24
+pandas==2.2.2
+numpy==2.2.6
+
+# 环境变量管理
+python-dotenv==1.2.1
