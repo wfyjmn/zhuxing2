@@ -1,3 +1,28 @@
 2026-02-11 01:07:56 - strategy_manager.config - INFO - 配置初始化完成
 2026-02-11 01:07:56 - strategy_manager.simple_backtest - INFO - Tushare连接成功
 2026-02-11 01:07:56 - strategy_manager.simple_backtest - INFO - Tushare连接成功
+2026-02-11 01:11:52 - strategy_manager.config - INFO - 配置初始化完成
+2026-02-11 01:11:53 - strategy_manager.simple_backtest - INFO - Tushare连接成功
+2026-02-11 01:11:53 - strategy_manager.simple_backtest - INFO - Tushare连接成功
+2026-02-11 01:12:27 - strategy_manager.config - INFO - 配置初始化完成
+2026-02-11 01:12:28 - strategy_manager.config - INFO - 配置初始化完成
+2026-02-11 01:12:28 - strategy_manager.simple_backtest - INFO - Tushare连接成功
+2026-02-11 01:12:28 - strategy_manager.adapter - INFO - 运行选股A逻辑...
+2026-02-11 01:12:28 - strategy_manager.adapter - INFO - 市场状态: 震荡市（指数偏离均线0.42%）
+2026-02-11 01:12:28 - strategy_manager.adapter - INFO - 选股A: 200 → 16 只
+2026-02-11 01:12:28 - strategy_manager.adapter - INFO - 运行选股B逻辑...
+2026-02-11 01:12:28 - strategy_manager.adapter - INFO - 选股B: 200 → 32 只
+2026-02-11 01:12:28 - strategy_manager.adapter - INFO - 运行选股C逻辑...
+2026-02-11 01:12:29 - strategy_manager.adapter - INFO - 行业分布:
+industry
+银行     6
+医药     5
+计算机    4
+电子     1
+Name: count, dtype: int64
+2026-02-11 01:12:29 - strategy_manager.adapter - INFO - 选股C: 200 → 16 只
+2026-02-11 01:12:29 - strategy_manager.config - INFO - 配置初始化完成
+2026-02-11 01:12:29 - strategy_manager.simple_backtest - INFO - Tushare连接成功
+2026-02-11 01:12:29 - strategy_manager.adapter - INFO - 开始回测对比: 买入日=20260201, 持有=5天
+2026-02-11 01:12:29 - strategy_manager.simple_backtest - INFO - 开始回测: 16 只股票, 买入日=20260201, 持有=5天
+2026-02-11 01:12:34 - strategy_manager.simple_backtest - INFO - 回测完成: 4/16 只股票成功回测

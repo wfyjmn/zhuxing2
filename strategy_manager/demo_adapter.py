@@ -58,8 +58,8 @@ def generate_demo_data(n_stocks: int = 200) -> pd.DataFrame:
         "industry": np.random.choice(["电子", "计算机", "医药", "银行"], n_stocks),
         "close": np.random.lognormal(mean=3.0, sigma=0.8, size=n_stocks).round(2),
         "pct_chg": np.random.normal(5, 5, n_stocks).round(2),
-        "turnover_rate": np.random.lognormal(mean=1.0, sigma=0.5, n_stocks).round(2),
-        "volume_ratio": np.random.lognormal(mean=0.2, sigma=0.5, n_stocks).round(2),
+        "turnover_rate": np.random.lognormal(mean=1.0, sigma=0.5, size=n_stocks).round(2),
+        "volume_ratio": np.random.lognormal(mean=0.2, sigma=0.5, size=n_stocks).round(2),
     }
 
     return pd.DataFrame(data)
