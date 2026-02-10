@@ -28,6 +28,14 @@ from dotenv import load_dotenv
 # ==================== 配置区域 ====================
 load_dotenv()
 
+# 导入统一配置
+from config.screening_config import (
+    API_CONFIG,
+    FILTER_CONFIG,
+    OUTPUT_CONFIG,
+    PATH_CONFIG
+)
+
 # 获取工作目录
 WORKSPACE_PATH = os.getenv('COZE_WORKSPACE_PATH', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -70,7 +78,7 @@ def run_screener(screener_name, script_path, output_file_pattern):
             return False, None, 0
 
         # 查找输出文件
-        output_dir = os.path.join(WORKSPACE_PATH, 'assets/data')
+        output_dir = os.path.join(WORKSPACE_PATH, PATH_CONFIG['output_dir'])
 
         # 获取最新交易日
         import pandas as pd
@@ -81,7 +89,7 @@ def run_screener(screener_name, script_path, output_file_pattern):
         from datetime import timedelta
         trade_cal = pro.trade_cal(
             exchange='SSE',
-            start_date=(datetime.now() - timedelta(days=10)).strftime('%Y%m%d')
+            start_date=(datetime.now() - timedelta(days=API_CONFIG['trade_cal_days'])).strftime('%Y%m%d')
         )
         trade_cal = trade_cal[trade_cal.is_open == 1]
         trade_date = trade_cal.iloc[-1]['cal_date']
@@ -217,9 +225,9 @@ def main():
 
         results[screener['name']] = (success, output_file, stock_count)
 
-        # 程序之间添加2秒延时，避免API限流
+        # 程序之间添加延时，避免API限流
         if screener != screeners[-1]:
-            time.sleep(2)
+            time.sleep(API_CONFIG['request_delay'])
 
     # 打印汇总报告
     print_summary(results)

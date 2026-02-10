@@ -49,9 +49,23 @@ import os
 # ==================== 配置区域 ====================
 load_dotenv()
 
+# 导入统一配置
+from config.screening_config import (
+    API_CONFIG,
+    SCREENER_B_CONFIG,
+    FILTER_CONFIG,
+    OUTPUT_CONFIG,
+    PATH_CONFIG
+)
+
+# 别名配置（保持向后兼容）
+SCREENING_PARAMS = SCREENER_B_CONFIG
+EXCLUDE_PREFIX = FILTER_CONFIG['exclude_prefix']
+EXCLUDE_NAME_KEYWORDS = FILTER_CONFIG['exclude_name_keywords']
+
 # 工作空间路径
 WORKSPACE_PATH = os.getenv('COZE_WORKSPACE_PATH', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUTPUT_FILE = os.path.join(WORKSPACE_PATH, 'assets/data/risk_filtered_stocks_{}.csv'.format(datetime.now().strftime('%Y%m%d')))
+OUTPUT_FILE = os.path.join(WORKSPACE_PATH, PATH_CONFIG['output_dir'] + f'/risk_filtered_stocks_{datetime.now().strftime(PATH_CONFIG["date_format"])}.csv')
 
 # Tushare Token
 TS_TOKEN = os.getenv('TUSHARE_TOKEN', '')
@@ -201,7 +215,7 @@ def get_trade_cal():
         trade_cal = api_call_with_retry(
             pro.trade_cal,
             exchange='SSE',
-            start_date=(datetime.now() - timedelta(days=10)).strftime('%Y%m%d')
+            start_date=(datetime.now() - timedelta(days=API_CONFIG['trade_cal_days'])).strftime('%Y%m%d')
         )
 
         if trade_cal is None:
@@ -236,8 +250,8 @@ def check_price_position(df, df_hist):
     df_hist = df_hist.sort_values(['ts_code', 'trade_date'])
 
     # 计算5日和10日均线
-    df_hist['ma5'] = df_hist.groupby('ts_code')['close'].rolling(5).mean().reset_index(0, drop=True)
-    df_hist['ma10'] = df_hist.groupby('ts_code')['close'].rolling(10).mean().reset_index(0, drop=True)
+    df_hist['ma5'] = df_hist.groupby('ts_code')['close'].rolling(SCREENING_PARAMS['ma5_days']).mean().reset_index(0, drop=True)
+    df_hist['ma10'] = df_hist.groupby('ts_code')['close'].rolling(SCREENING_PARAMS['ma10_days']).mean().reset_index(0, drop=True)
 
     # 获取每只股票最新的均线数据
     latest_ma = df_hist.groupby('ts_code').last().reset_index()
@@ -475,8 +489,8 @@ def get_daily_screener():
     print("\n[步骤6/6] 计算高级指标...")
 
     try:
-        # 获取过去5日数据计算成交量倍数
-        start_date_5d = (datetime.now() - timedelta(days=10)).strftime('%Y%m%d')
+        # 获取过去历史数据计算成交量倍数
+        start_date_5d = (datetime.now() - timedelta(days=API_CONFIG['trade_cal_days'])).strftime('%Y%m%d')
 
         print("    - 获取历史数据计算成交量倍数...")
         df_hist = get_daily_data_batch(
@@ -487,9 +501,9 @@ def get_daily_screener():
 
         # 初始化必要字段
         if 'volume_ratio' not in df.columns:
-            df['volume_ratio'] = 1.0
+            df['volume_ratio'] = SCREENING_PARAMS['default_volume_ratio']
         if 'turnover_rate' not in df.columns:
-            df['turnover_rate'] = 0.0
+            df['turnover_rate'] = SCREENING_PARAMS['default_turnover_rate']
         if 'list_days' not in df.columns:
             df['list_date'] = pd.to_datetime(df['list_date'], format='%Y%m%d')
             df['list_days'] = (datetime.now() - df['list_date']).dt.days
@@ -499,7 +513,7 @@ def get_daily_screener():
             df_hist = df_hist.sort_values(['ts_code', 'trade_date'])
 
             # 计算每只股票的5日平均成交量
-            df_hist_5d = df_hist.groupby('ts_code')['vol'].rolling(5).mean().reset_index()
+            df_hist_5d = df_hist.groupby('ts_code')['vol'].rolling(SCREENING_PARAMS['ma5_days']).mean().reset_index()
             df_hist_5d.columns = ['ts_code', 'vol_5d']
             df_hist_5d = df_hist_5d.dropna().groupby('ts_code').last()
 
@@ -507,7 +521,7 @@ def get_daily_screener():
 
             # 计算成交量倍数
             df['volume_ratio'] = df['vol'] / df['vol_5d']
-            df['volume_ratio'] = df['volume_ratio'].fillna(1.0)
+            df['volume_ratio'] = df['volume_ratio'].fillna(SCREENING_PARAMS['default_volume_ratio'])
 
             # 成交量倍数筛选
             print(f"    - 成交量倍数 >= {SCREENING_PARAMS['volume_ratio_min']}")

@@ -24,6 +24,44 @@ API_CONFIG = {
     # 批量获取配置
     'batch_size': 500,          # 批量获取股票数量
     'limit': 5000,              # 单次请求的上限数量
+    
+    # 交易日历配置
+    'trade_cal_days': 10,       # 查询最近多少天的交易日历
+}
+
+# ==================== 选股A配置 ====================
+SCREENER_A_CONFIG = {
+    # 市场状态判断参数
+    'ma_days': 20,               # 均线天数（判断市场状态）
+    'index_history_days': 60,    # 指数历史数据获取天数
+    'bull_market_threshold': 3.0,  # 牛市偏离度阈值（%）
+    'bear_market_threshold': -3.0,  # 熊市偏离度阈值（%）
+    
+    # 基础筛选参数
+    'market_cap_min': 20,        # 最小市值（亿）
+    'market_cap_max': 300,       # 最大市值（亿）
+    'pe_ttm_min': 0,             # 最小PE(TTM)（允许亏损股）
+    'pe_ttm_max': 60,            # 最大PE(TTM）
+    'price_min': 3,              # 最低价格（元）
+    'price_max': 50,             # 最高价格（元）
+    'turnover_min': 3,           # 最小换手率（%）
+    'turnover_max': 20,          # 最大换手率（%）
+    'min_list_days': 60,         # 最少上市天数
+    
+    # 成交量倍数参数
+    'volume_ratio_min': 1.5,     # 最小成交量倍数
+    
+    # 交易日历查询参数
+    'trade_cal_days': 10,        # 查询最近多少天的交易日历
+    
+    # 均线参数
+    'ma5_days': 5,               # 5日均线天数
+    
+    # 默认值参数
+    'default_volume_ratio': 1.0,    # 默认成交量倍数
+    'default_turnover_rate': 0.0,   # 默认换手率
+    'default_list_days': 999,      # 默认上市天数
+    'default_value': 0,             # 默认值
 }
 
 # ==================== 选股B配置 ====================
@@ -204,6 +242,14 @@ def validate_config():
     if API_CONFIG['batch_size'] < 1:
         errors.append("API配置: batch_size 必须大于0")
     
+    # 验证选股A配置
+    if SCREENER_A_CONFIG['market_cap_min'] >= SCREENER_A_CONFIG['market_cap_max']:
+        errors.append("选股A配置: market_cap_min 必须小于 market_cap_max")
+    if SCREENER_A_CONFIG['price_min'] >= SCREENER_A_CONFIG['price_max']:
+        errors.append("选股A配置: price_min 必须小于 price_max")
+    if SCREENER_A_CONFIG['turnover_min'] >= SCREENER_A_CONFIG['turnover_max']:
+        errors.append("选股A配置: turnover_min 必须小于 turnover_max")
+    
     # 验证选股B配置
     if SCREENER_B_CONFIG['min_pct_chg'] < 0:
         errors.append("选股B配置: min_pct_chg 必须大于等于0")
@@ -234,7 +280,7 @@ def get_config(screener_type='B'):
     获取指定选股程序的配置
     
     Args:
-        screener_type: 选股类型 ('B' 或 'C')
+        screener_type: 选股类型 ('A', 'B' 或 'C')
     
     Returns:
         dict: 配置字典
@@ -247,7 +293,9 @@ def get_config(screener_type='B'):
         'path': PATH_CONFIG,
     }
     
-    if screener_type == 'B':
+    if screener_type == 'A':
+        config.update({'screener': SCREENER_A_CONFIG})
+    elif screener_type == 'B':
         config.update({'screener': SCREENER_B_CONFIG})
     elif screener_type == 'C':
         config.update({'screener': SCREENER_C_CONFIG})
@@ -263,19 +311,19 @@ def print_config(screener_type='B'):
     打印指定选股程序的配置
     
     Args:
-        screener_type: 选股类型 ('B' 或 'C')
+        screener_type: 选股类型 ('A', 'B' 或 'C')
     """
     config = get_config(screener_type)
     
     print("=" * 80)
-    print(f"选股{'B' if screener_type == 'B' else 'C'}配置")
+    print(f"选股{'A' if screener_type == 'A' else 'B' if screener_type == 'B' else 'C'}配置")
     print("=" * 80)
     
     print("\n【API配置】")
     for key, value in config['api'].items():
         print(f"  {key}: {value}")
     
-    print(f"\n【选股{'B' if screener_type == 'B' else 'C'}配置】")
+    print(f"\n【选股{'A' if screener_type == 'A' else 'B' if screener_type == 'B' else 'C'}配置】")
     for key, value in config['screener'].items():
         print(f"  {key}: {value}")
     
@@ -297,6 +345,8 @@ if __name__ == '__main__':
         print("配置验证通过")
     
     # 打印配置
+    print()
+    print_config('A')
     print()
     print_config('B')
     print()

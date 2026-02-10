@@ -14,14 +14,19 @@ import os
 
 load_dotenv()
 
-# API配置
-API_CONFIG = {
-    'token': os.getenv('TUSHARE_TOKEN'),
-    'retry_times': 3,
-    'retry_delay': 1,
-    'batch_size': 500,
-    'limit': 5000,
-}
+# 导入统一配置
+from config.screening_config import (
+    API_CONFIG,
+    SCREENER_C_CONFIG,
+    FILTER_CONFIG,
+    OUTPUT_CONFIG,
+    PATH_CONFIG
+)
+
+# 别名配置（保持向后兼容）
+SCREENING_PARAMS = SCREENER_C_CONFIG
+EXCLUDE_PREFIX = FILTER_CONFIG['exclude_prefix']
+EXCLUDE_NAME_KEYWORDS = FILTER_CONFIG['exclude_name_keywords']
 
 pro = ts.pro_api(API_CONFIG['token'])
 
@@ -53,7 +58,7 @@ def main():
     trade_cal = api_call_with_retry(
         pro.trade_cal,
         exchange='SSE',
-        start_date=(datetime.now() - timedelta(days=10)).strftime('%Y%m%d')
+        start_date=(datetime.now() - timedelta(days=API_CONFIG['trade_cal_days'])).strftime('%Y%m%d')
     )
     
     if trade_cal is None:
@@ -103,25 +108,29 @@ def main():
     # 排除科创/创业板/北交所
     print("  - 排除科创/创业板/北交所...")
     df = df_daily.copy()
-    pattern = '^688|^300|^301|^43|^83|^87|^88|^BJ'
-    df = df[~df['ts_code'].str.match(pattern, na=False)]
+    
+    # 使用配置中的排除前缀
+    exclude_pattern = '|'.join([f'^{prefix}' for prefix in EXCLUDE_PREFIX])
+    df = df[~df['ts_code'].str.match(exclude_pattern, na=False)]
     print(f"    → 剩余 {len(df)} 只股票")
     
     # 排除ST股
     print("  - 排除ST股...")
     df['name'] = df['ts_code'].map(lambda x: stock_basic_dict.get(x, {}).get('name', ''))
-    pattern = 'ST|\\*ST|退|退整理'
-    df = df[~df['name'].str.contains(pattern, na=False)]
+    
+    # 使用配置中的排除关键词
+    exclude_pattern = '|'.join([f'{keyword}' for keyword in EXCLUDE_NAME_KEYWORDS])
+    df = df[~df['name'].str.contains(exclude_pattern, na=False)]
     print(f"    → 剩余 {len(df)} 只股票")
     
     # 涨幅筛选
-    print("  - 涨幅 >= 5%...")
-    df = df[df['pct_chg'] >= 5.0]
+    print(f"  - 涨幅 >= {SCREENING_PARAMS['min_pct_chg']}%...")
+    df = df[df['pct_chg'] >= SCREENING_PARAMS['min_pct_chg']]
     print(f"    → 剩余 {len(df)} 只股票")
     
     # 价格筛选
-    print("  - 价格 3-50 元...")
-    df = df[(df['close'] >= 3) & (df['close'] <= 50)]
+    print(f"  - 价格 {SCREENING_PARAMS['price_min']}-{SCREENING_PARAMS['price_max']} 元...")
+    df = df[(df['close'] >= SCREENING_PARAMS['price_min']) & (df['close'] <= SCREENING_PARAMS['price_max'])]
     print(f"    → 剩余 {len(df)} 只股票")
     
     # 合并基本信息
@@ -133,7 +142,7 @@ def main():
     df['list_date'] = pd.to_datetime(df['list_date'], format='%Y%m%d', errors='coerce')
     df = df[df['list_date'].notna()]
     df['list_days'] = (datetime.now() - df['list_date']).dt.days
-    df = df[df['list_days'] >= 60]
+    df = df[df['list_days'] >= SCREENING_PARAMS['min_list_days']]
     print(f"  → 剩余 {len(df)} 只股票")
     
     if len(df) == 0:
@@ -168,26 +177,32 @@ def main():
                     df = df.merge(df_daily_basic[['ts_code', col]], on='ts_code', how='left')
         df['total_mv'] = df['total_mv'] / 10000
     
+    # 填充默认值
+    df['turnover_rate'] = df['turnover_rate'].fillna(SCREENING_PARAMS['default_turnover_rate'])
+    
     # 换手率筛选
-    print("  - 换手率 3-20%...")
-    df = df[(df['turnover_rate'] >= 3) & (df['turnover_rate'] <= 20)]
+    print(f"  - 换手率 {SCREENING_PARAMS['turnover_min']}-{SCREENING_PARAMS['turnover_max']}%...")
+    df = df[(df['turnover_rate'] >= SCREENING_PARAMS['turnover_min']) & (df['turnover_rate'] <= SCREENING_PARAMS['turnover_max'])]
     print(f"    → 剩余 {len(df)} 只股票")
     
     # 计算综合评分
     print("\n[步骤7] 计算综合评分...")
-    df['score_pct_chg'] = (df['pct_chg'] / df['pct_chg'].max() * 100).fillna(0)
+    
+    # 使用配置中的权重
+    df['score_pct_chg'] = (df['pct_chg'] / df['pct_chg'].max() * OUTPUT_CONFIG['score_max']).fillna(SCREENING_PARAMS['default_value'])
     
     if 'turnover_rate' in df.columns:
-        df['score_turnover'] = (df['turnover_rate'] / df['turnover_rate'].max() * 100).fillna(0)
+        df['score_turnover'] = (df['turnover_rate'] / df['turnover_rate'].max() * OUTPUT_CONFIG['score_max']).fillna(SCREENING_PARAMS['default_value'])
     else:
-        df['score_turnover'] = 0
+        df['score_turnover'] = SCREENING_PARAMS['default_value']
     
-    df['score_volume'] = 50  # 默认值
+    df['score_volume'] = OUTPUT_CONFIG['score_max'] // 2  # 默认值为50
     
+    # 使用配置中的权重
     df['composite_score'] = (
-        df['score_pct_chg'] * 0.4 +
-        df['score_turnover'] * 0.3 +
-        df['score_volume'] * 0.3
+        df['score_pct_chg'] * SCREENING_PARAMS['weight_pct_chg'] +
+        df['score_turnover'] * SCREENING_PARAMS['weight_turnover'] +
+        df['score_volume'] * SCREENING_PARAMS['weight_volume']
     )
     
     # 格式化输出
