@@ -45,6 +45,10 @@ from .strategy_database import StrategyDatabase
 from .parameter_optimizer import ParameterOptimizer, ParamSpec, ParamType, OptimizationResult
 from .strategy_manager import StrategyManager
 
+# 简化版适配器
+from .simple_backtest import SimpleBacktestEngine
+from .adapter import MarketStateDetector, ScreenerAdapter
+
 # 策略相关
 from .strategies import (
     BaseStrategy,
@@ -73,6 +77,10 @@ __all__ = [
     "ParamSpec",
     "ParamType",
     "OptimizationResult",
+    # 简化版适配器
+    "SimpleBacktestEngine",
+    "MarketStateDetector",
+    "ScreenerAdapter",
     # 策略基类和工厂
     "BaseStrategy",
     "StrategyFactory",
