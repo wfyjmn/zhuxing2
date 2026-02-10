@@ -14,3 +14,4 @@ __pycache__/
 .envrestored_files/
 projects/
 restore_*.py
+restored_files/
